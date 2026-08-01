@@ -79,11 +79,23 @@ final pendingSyncCountProvider = FutureProvider.autoDispose<int>((ref) async {
 /// the moment the device comes back online. Instantiated once from the app
 /// root (see `MainShellScreen`) via `ref.watch`, not read elsewhere.
 final autoFlushOnReconnectProvider = Provider<void>((ref) {
+  void flushAndRefreshCount() {
+    ref.read(syncQueueServiceProvider).flush().then((_) {
+      ref.invalidate(pendingSyncCountProvider);
+    });
+  }
+
   ref.listen(isOnlineProvider, (previous, next) {
     if (previous == false && next == true) {
-      ref.read(syncQueueServiceProvider).flush().then((_) {
-        ref.invalidate(pendingSyncCountProvider);
-      });
+      flushAndRefreshCount();
     }
   });
+
+  // Also try once on app start: items can be left over from a previous
+  // run (e.g. the app was killed before connectivity ever flipped while
+  // it was running), and `isOnlineProvider`'s very first emission is a
+  // steady state, not a transition — nothing above would ever fire for
+  // that case otherwise. `flush()` is a no-op if there's nothing queued
+  // and safely stops after the first item if actually offline.
+  flushAndRefreshCount();
 });

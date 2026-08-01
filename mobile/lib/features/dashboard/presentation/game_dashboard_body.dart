@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/game_colors.dart';
 import '../../../core/offline/sync_queue_service.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/game/game_widgets.dart';
 import '../../../shared/widgets/leon_mascot.dart';
@@ -394,7 +395,7 @@ class _GameQuestLogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = transactionColor(transaction.type);
+    final color = transactionColor(transaction.type, AppVisualStyle.gameLeon);
     final isVoided = transaction.isVoided;
     return Opacity(
       opacity: isVoided ? 0.4 : 1,

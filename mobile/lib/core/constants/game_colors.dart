@@ -29,6 +29,13 @@ class GameColors {
   static const List<Color> goldGradient = [Color(0xFFFFE08A), gold, goldDark];
   static const List<Color> chestGradient = [Color(0xFF6A4A2E), Color(0xFF8A5E36)];
 
+  /// Header/hero gradient — the Game Leon counterpart to
+  /// `AppColors.headerGradient` / `DarkColors.headerGradient`, used
+  /// uniformly across every `SectionAppBar` instead of a flat per-tab
+  /// accent. Deep violet into the mascot's signature cyan keeps it
+  /// legible for white title text while still reading as "neon".
+  static const List<Color> headerGradient = [Color(0xFF3A2B72), Color(0xFF3D6FE0)];
+
   /// Deterministic accent per vault/achievement id, mirroring
   /// `AppColors.forKey` but from the vivid game palette.
   static const List<Color> accentPalette = [cyan, magenta, lime, violet, coral, gold];

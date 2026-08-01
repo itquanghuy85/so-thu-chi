@@ -38,7 +38,7 @@ class RecurringListScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Giao dịch định kỳ', accent: accent),
+      appBar: SectionAppBar(title: 'Giao dịch định kỳ', style: style),
       body: recurringAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
         error: (error, _) => Center(
@@ -90,7 +90,7 @@ class _RecurringTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = transactionColor(item.type);
+    final color = transactionColor(item.type, ref.watch(visualStyleProvider));
     final desc = [item.category?.name, item.fromVault?.name, item.toVault?.name, item.customer?.name].whereType<String>().join(' • ');
     return Opacity(
       opacity: item.active ? 1 : 0.5,

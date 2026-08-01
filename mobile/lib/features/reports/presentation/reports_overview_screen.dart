@@ -52,7 +52,7 @@ class ReportsOverviewScreen extends ConsumerWidget {
       backgroundColor: n.tint(accent),
       appBar: SectionAppBar(
         title: 'Báo cáo',
-        accent: accent,
+        style: style,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',

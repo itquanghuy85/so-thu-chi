@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
@@ -192,7 +193,7 @@ class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
                       key: ValueKey(_type),
                       fieldKey: 'note_${transactionTypeToString(_type)}',
                       controller: _noteController,
-                      accent: transactionColor(_type),
+                      accent: transactionColor(_type, ref.watch(visualStyleProvider)),
                     ),
                     TextFormField(
                       controller: _reasonController,

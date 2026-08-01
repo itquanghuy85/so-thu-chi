@@ -103,3 +103,13 @@ ScreenNeutrals neutralsFor(AppVisualStyle style) => switch (style) {
       AppVisualStyle.gameLeon => ScreenNeutrals.game,
       AppVisualStyle.classic => ScreenNeutrals.classic,
     };
+
+/// The one gradient every `SectionAppBar` uses, regardless of which
+/// section it belongs to — each style's own primary/brand hue pair, so the
+/// app reads as one coherent product instead of a different flat color
+/// per tab (Giao dịch's amber, Công nợ's purple, ...).
+List<Color> headerGradientFor(AppVisualStyle style) => switch (style) {
+      AppVisualStyle.dark => DarkColors.headerGradient,
+      AppVisualStyle.gameLeon => GameColors.headerGradient,
+      AppVisualStyle.classic => AppColors.headerGradient,
+    };

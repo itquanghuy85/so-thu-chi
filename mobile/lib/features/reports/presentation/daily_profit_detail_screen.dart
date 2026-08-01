@@ -62,7 +62,7 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Báo cáo lợi nhuận', accent: accent),
+      appBar: SectionAppBar(title: 'Báo cáo lợi nhuận', style: style),
       body: Column(
         children: [
           Padding(

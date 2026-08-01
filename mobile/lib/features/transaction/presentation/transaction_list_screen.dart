@@ -62,7 +62,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       backgroundColor: n.tint(accent),
       appBar: SectionAppBar(
         title: 'Giao dịch',
-        accent: accent,
+        style: style,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',
@@ -122,11 +122,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 children: [
                   _TypeChip(label: 'Loại', selected: state.filter.type == null, icon: Icons.filter_list, neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(clearType: true))),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Thu', selected: state.filter.type == TransactionType.income, color: AppColors.income, neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.income))),
+                  _TypeChip(label: 'Thu', selected: state.filter.type == TransactionType.income, color: transactionColor(TransactionType.income, style), neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.income))),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Chi', selected: state.filter.type == TransactionType.expense, color: AppColors.expense, neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.expense))),
+                  _TypeChip(label: 'Chi', selected: state.filter.type == TransactionType.expense, color: transactionColor(TransactionType.expense, style), neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.expense))),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Chuyển', selected: state.filter.type == TransactionType.transfer, color: AppColors.transfer, neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.transfer))),
+                  _TypeChip(label: 'Chuyển', selected: state.filter.type == TransactionType.transfer, color: transactionColor(TransactionType.transfer, style), neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.transfer))),
                 ],
               ),
             ),
@@ -277,8 +277,10 @@ class TransactionTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final n = neutralsFor(ref.watch(visualStyleProvider));
-    final color = transactionColor(transaction.type);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final color = transactionColor(transaction.type, style);
+    final pendingColor = transactionColor(TransactionType.transfer, style);
     final timeFormat = DateFormat('HH:mm dd/MM', 'vi_VN');
     final isVoided = transaction.isVoided;
 
@@ -307,10 +309,10 @@ class TransactionTile extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.transfer.withValues(alpha: 0.15),
+                    color: pendingColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('Chờ đồng bộ', style: TextStyle(fontSize: 10, color: AppColors.transfer, fontWeight: FontWeight.w600)),
+                  child: Text('Chờ đồng bộ', style: TextStyle(fontSize: 10, color: pendingColor, fontWeight: FontWeight.w600)),
                 ),
               ],
             ],
@@ -334,8 +336,9 @@ class TransactionTile extends ConsumerWidget {
 /// Bottom sheet showing transaction detail (Mục 12.5.1) with a "Hủy giao
 /// dịch" action when the transaction is still active.
 void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction transaction) {
-  final color = transactionColor(transaction.type);
-  final n = neutralsFor(ref.read(visualStyleProvider));
+  final style = ref.read(visualStyleProvider);
+  final color = transactionColor(transaction.type, style);
+  final n = neutralsFor(style);
   showModalBottomSheet(
     context: context,
     backgroundColor: n.surface,

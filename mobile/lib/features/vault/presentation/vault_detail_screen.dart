@@ -35,7 +35,7 @@ class VaultDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: vault.name, accent: accent),
+      appBar: SectionAppBar(title: vault.name, style: style),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(_vaultTransactionsProvider(vault.id)),
         child: ListView(

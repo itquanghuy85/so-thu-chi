@@ -32,7 +32,7 @@ class DailyClosingScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Chốt sổ cuối ngày', accent: accent),
+      appBar: SectionAppBar(title: 'Chốt sổ cuối ngày', style: style),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(dailyClosingTodayProvider);

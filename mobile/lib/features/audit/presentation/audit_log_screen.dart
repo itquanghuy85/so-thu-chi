@@ -29,7 +29,7 @@ class AuditLogScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Lịch sử chỉnh sửa', accent: accent),
+      appBar: SectionAppBar(title: 'Lịch sử chỉnh sửa', style: style),
       body: logsAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
         error: (error, _) => Center(

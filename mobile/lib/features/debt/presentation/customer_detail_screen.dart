@@ -31,7 +31,7 @@ class CustomerDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: customer.name, accent: accent),
+      appBar: SectionAppBar(title: customer.name, style: style),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(_debtHistoryProvider(customer.id));

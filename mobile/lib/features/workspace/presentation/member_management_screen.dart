@@ -48,7 +48,7 @@ class MemberManagementScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Thành viên', accent: accent),
+      appBar: SectionAppBar(title: 'Thành viên', style: style),
       body: workspaceAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
         error: (error, _) => Center(child: Text('Không thể tải thông tin', style: TextStyle(color: n.textPrimary))),

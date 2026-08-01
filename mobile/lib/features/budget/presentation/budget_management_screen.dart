@@ -32,7 +32,7 @@ class BudgetManagementScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Ngân sách', accent: accent),
+      appBar: SectionAppBar(title: 'Ngân sách', style: style),
       body: budgetsAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
         error: (error, _) => Center(

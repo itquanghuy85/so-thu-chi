@@ -1,26 +1,30 @@
 import 'package:flutter/material.dart';
 
-/// A solid-color `AppBar` tinted to a bottom-nav tab's own accent (Mục 12:
-/// each of the 5 main tabs — Tổng quan/Giao dịch/Túi tiền/Công nợ/Báo cáo —
-/// has its own color, matching `MainShellScreen`'s `_navItems` and that
-/// screen's own hero card/summary tiles), instead of every screen sharing
-/// the same neutral default `AppBarTheme` from `app.dart`.
+import '../../core/theme/screen_neutrals.dart';
+import '../../core/theme/visual_style_provider.dart';
+
+/// A gradient `AppBar` built from the app's own primary/brand hue for the
+/// current visual style — the same two-tone gradient on every screen
+/// (Tổng quan, Giao dịch, Túi tiền, Công nợ, Báo cáo, ...), instead of each
+/// tab carrying its own unrelated flat color. Compact, standard toolbar
+/// height — no oversized bottom-rounded shape.
 class SectionAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final Color accent;
+  final AppVisualStyle style;
   final List<Widget>? actions;
 
-  const SectionAppBar({super.key, required this.title, required this.accent, this.actions});
+  const SectionAppBar({super.key, required this.title, required this.style, this.actions});
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      backgroundColor: accent,
       foregroundColor: Colors.white,
       elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(22), bottomRight: Radius.circular(22)),
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: headerGradientFor(style), begin: Alignment.centerLeft, end: Alignment.centerRight),
+        ),
       ),
       actions: actions,
     );

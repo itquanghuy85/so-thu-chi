@@ -41,7 +41,7 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Cài đặt', accent: accent),
+      appBar: SectionAppBar(title: 'Cài đặt', style: style),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

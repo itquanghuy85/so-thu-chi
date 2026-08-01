@@ -37,7 +37,7 @@ class VaultListScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Túi tiền', accent: accent),
+      appBar: SectionAppBar(title: 'Túi tiền', style: style),
       body: vaultsAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
         error: (error, _) => Center(child: Text('Không thể tải danh sách túi tiền', style: TextStyle(color: n.textPrimary))),

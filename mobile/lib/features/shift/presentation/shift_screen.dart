@@ -31,7 +31,7 @@ class ShiftScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Ca làm việc', accent: accent),
+      appBar: SectionAppBar(title: 'Ca làm việc', style: style),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(currentShiftProvider);

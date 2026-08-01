@@ -37,7 +37,7 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Danh mục', accent: accent),
+      appBar: SectionAppBar(title: 'Danh mục', style: style),
       body: Column(
         children: [
           Padding(

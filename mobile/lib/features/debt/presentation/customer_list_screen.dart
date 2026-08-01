@@ -44,7 +44,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
       backgroundColor: n.tint(accent),
       appBar: SectionAppBar(
         title: 'Công nợ',
-        accent: accent,
+        style: style,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',

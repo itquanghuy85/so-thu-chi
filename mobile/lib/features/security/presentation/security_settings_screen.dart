@@ -106,7 +106,7 @@ class _SecuritySettingsScreenState extends ConsumerState<SecuritySettingsScreen>
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Bảo mật', accent: accent),
+      appBar: SectionAppBar(title: 'Bảo mật', style: style),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: n.isGame ? accent : null))
           : ListView(

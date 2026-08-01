@@ -69,7 +69,7 @@ class _CashflowDetailScreenState extends ConsumerState<CashflowDetailScreen> {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: 'Báo cáo dòng tiền', accent: accent),
+      appBar: SectionAppBar(title: 'Báo cáo dòng tiền', style: style),
       body: Column(
         children: [
           Padding(

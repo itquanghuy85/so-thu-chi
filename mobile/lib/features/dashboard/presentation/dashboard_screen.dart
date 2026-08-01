@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/game_colors.dart';
 import '../../../core/offline/sync_queue_service.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
 import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
@@ -45,10 +47,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final workspace = ref.watch(currentWorkspaceProvider);
     final user = ref.watch(authNotifierProvider).user;
     final dashboardAsync = ref.watch(dashboardDataProvider);
-    final isGameStyle = ref.watch(visualStyleProvider) == AppVisualStyle.gameLeon;
+    final style = ref.watch(visualStyleProvider);
+    final isGameStyle = style == AppVisualStyle.gameLeon;
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dashboard, style);
 
     return Scaffold(
-      backgroundColor: isGameStyle ? GameColors.bgTop : AppColors.tint(AppColors.primary),
+      backgroundColor: n.tint(accent),
       body: dashboardAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: isGameStyle ? GameColors.cyan : null)),
         error: (error, _) => Center(
@@ -60,7 +65,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Text(
                   'Không thể tải dữ liệu tổng quan.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: isGameStyle ? GameColors.textPrimary : null),
+                  style: TextStyle(color: n.textPrimary),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton(
@@ -90,16 +95,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 todayNet: data.todayNet,
                 hidden: _balanceHidden,
                 onToggleHidden: () => setState(() => _balanceHidden = !_balanceHidden),
+                accent: accent,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _TodayCashflowRow(income: data.todayIncome, expense: data.todayExpense),
+                    _TodayCashflowRow(income: data.todayIncome, expense: data.todayExpense, neutrals: n),
                     const _BudgetWarningBanner(),
                     const SizedBox(height: 20),
-                    _VaultCarousel(vaults: data.vaults),
+                    _VaultCarousel(vaults: data.vaults, neutrals: n),
                     const SizedBox(height: 20),
                     _QuickActionsRow(
                       onCreated: () {
@@ -114,7 +120,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Giao dịch gần đây', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text('Giao dịch gần đây', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: n.textPrimary)),
                         TextButton(
                           onPressed: () => context.go('/transactions'),
                           child: const Text('Xem tất cả'),
@@ -122,9 +128,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ],
                     ),
                     if (data.recentTransactions.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Text('Chưa có giao dịch nào', style: TextStyle(color: AppColors.textSecondary)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text('Chưa có giao dịch nào', style: TextStyle(color: n.textSecondary)),
                       )
                     else
                       ...data.recentTransactions.map(
@@ -149,6 +155,7 @@ class _HeaderCard extends StatelessWidget {
   final num todayNet;
   final bool hidden;
   final VoidCallback onToggleHidden;
+  final Color accent;
 
   const _HeaderCard({
     required this.userName,
@@ -157,6 +164,7 @@ class _HeaderCard extends StatelessWidget {
     required this.todayNet,
     required this.hidden,
     required this.onToggleHidden,
+    required this.accent,
   });
 
   @override
@@ -170,13 +178,13 @@ class _HeaderCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: AppColors.headerGradient,
+          colors: AppColors.heroGradient(accent),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
       ),
       child: SafeArea(
         bottom: false,
@@ -258,25 +266,22 @@ class _HeaderCard extends StatelessWidget {
 class _TodayCashflowRow extends StatelessWidget {
   final num income;
   final num expense;
+  final ScreenNeutrals neutrals;
 
-  const _TodayCashflowRow({required this.income, required this.expense});
+  const _TodayCashflowRow({required this.income, required this.expense, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
     final net = income - expense;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
+      decoration: neutrals.cardDecoration(radius: 16),
       child: Row(
         children: [
-          Expanded(child: _CashflowStat(label: 'Thu', sub: 'Hôm nay', amount: income, color: AppColors.income, icon: Icons.arrow_downward)),
-          Container(width: 1, height: 40, color: AppColors.divider),
-          Expanded(child: _CashflowStat(label: 'Chi', sub: 'Hôm nay', amount: expense, color: AppColors.expense, icon: Icons.arrow_upward)),
-          Container(width: 1, height: 40, color: AppColors.divider),
+          Expanded(child: _CashflowStat(label: 'Thu', sub: 'Hôm nay', amount: income, color: AppColors.income, icon: Icons.arrow_downward, neutrals: neutrals)),
+          Container(width: 1, height: 40, color: neutrals.divider),
+          Expanded(child: _CashflowStat(label: 'Chi', sub: 'Hôm nay', amount: expense, color: AppColors.expense, icon: Icons.arrow_upward, neutrals: neutrals)),
+          Container(width: 1, height: 40, color: neutrals.divider),
           Expanded(
             child: _CashflowStat(
               label: 'Thuần',
@@ -284,6 +289,7 @@ class _TodayCashflowRow extends StatelessWidget {
               amount: net,
               color: net >= 0 ? AppColors.income : AppColors.expense,
               icon: Icons.swap_vert,
+              neutrals: neutrals,
             ),
           ),
         ],
@@ -298,6 +304,7 @@ class _CashflowStat extends StatelessWidget {
   final num amount;
   final Color color;
   final IconData icon;
+  final ScreenNeutrals neutrals;
 
   const _CashflowStat({
     required this.label,
@@ -305,6 +312,7 @@ class _CashflowStat extends StatelessWidget {
     required this.amount,
     required this.color,
     required this.icon,
+    required this.neutrals,
   });
 
   @override
@@ -320,7 +328,7 @@ class _CashflowStat extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
-        Text('$label $sub', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        Text('$label $sub', style: TextStyle(fontSize: 11, color: neutrals.textSecondary)),
       ],
     );
   }
@@ -335,6 +343,7 @@ class _BudgetWarningBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetsAsync = ref.watch(budgetListProvider);
+    final n = neutralsFor(ref.watch(visualStyleProvider));
     return budgetsAsync.maybeWhen(
       data: (budgets) {
         final flagged = budgets.where((b) => b.progress >= 0.8).toList()..sort((a, b) => b.progress.compareTo(a.progress));
@@ -350,7 +359,7 @@ class _BudgetWarningBanner extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
+                color: color.withValues(alpha: n.isGame ? 0.16 : 0.08),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: color.withValues(alpha: 0.3)),
               ),
@@ -371,7 +380,7 @@ class _BudgetWarningBanner extends ConsumerWidget {
                         if (flagged.length > 1)
                           Text(
                             overCount > 0 ? 'Và ${flagged.length - 1} ngân sách khác cần chú ý' : 'Và ${flagged.length - 1} ngân sách khác gần đạt hạn mức',
-                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            style: TextStyle(fontSize: 11, color: n.textSecondary),
                           ),
                       ],
                     ),
@@ -390,18 +399,20 @@ class _BudgetWarningBanner extends ConsumerWidget {
 
 class _VaultCarousel extends StatelessWidget {
   final List<Vault> vaults;
+  final ScreenNeutrals neutrals;
 
-  const _VaultCarousel({required this.vaults});
+  const _VaultCarousel({required this.vaults, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
     if (vaults.isEmpty) {
       return Card(
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
-        child: const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Chưa có túi tiền. Thêm túi tiền trong tab Túi tiền.'),
+        color: neutrals.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: neutrals.divider)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('Chưa có túi tiền. Thêm túi tiền trong tab Túi tiền.', style: TextStyle(color: neutrals.textPrimary)),
         ),
       );
     }
@@ -422,23 +433,19 @@ class _VaultCarousel extends StatelessWidget {
             child: Container(
               width: 152,
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-              ),
+              decoration: neutrals.cardDecoration(radius: 14, accent: neutrals.isGame ? color : null),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(radius: 14, backgroundColor: color.withValues(alpha: 0.12), child: Icon(vaultTypeIcon(vault.type), color: color, size: 15)),
                   const Spacer(),
-                  Text(vault.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                  Text(vault.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: neutrals.textPrimary)),
                   const SizedBox(height: 2),
                   Text(
                     formatVND(vault.currentBalance),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: neutrals.textPrimary),
                   ),
                   const SizedBox(height: 6),
                   ClipRRect(

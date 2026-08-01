@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/section_app_bar.dart';
 import '../domain/cashflow_report.dart';
@@ -53,9 +56,13 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
         ? ref.watch(customDailyProfitProvider(_customRange!))
         : ref.watch(dailyProfitProvider(_period ?? ReportPeriod.month));
 
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.reports, style);
+
     return Scaffold(
-      backgroundColor: AppColors.tint(AppColors.reports),
-      appBar: const SectionAppBar(title: 'Báo cáo lợi nhuận', accent: AppColors.reports),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Báo cáo lợi nhuận', accent: accent),
       body: Column(
         children: [
           Padding(
@@ -72,9 +79,9 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
                         label: Text(p.label),
                         selected: selected,
                         onSelected: (_) => setState(() => _period = p),
-                        selectedColor: AppColors.reports,
-                        labelStyle: TextStyle(color: selected ? Colors.white : AppColors.textPrimary, fontSize: 12),
-                        backgroundColor: AppColors.surface,
+                        selectedColor: accent,
+                        labelStyle: TextStyle(color: selected ? Colors.white : n.textPrimary, fontSize: 12),
+                        backgroundColor: n.surface,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         side: BorderSide.none,
                       ),
@@ -87,9 +94,9 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
                         : 'Tùy chọn'),
                     selected: _isCustom,
                     onSelected: (_) => _pickCustomRange(),
-                    selectedColor: AppColors.reports,
-                    labelStyle: TextStyle(color: _isCustom ? Colors.white : AppColors.textPrimary, fontSize: 12),
-                    backgroundColor: AppColors.surface,
+                    selectedColor: accent,
+                    labelStyle: TextStyle(color: _isCustom ? Colors.white : n.textPrimary, fontSize: 12),
+                    backgroundColor: n.surface,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     side: BorderSide.none,
                   ),
@@ -99,8 +106,8 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
           ),
           Expanded(
             child: dataAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => const Center(child: Text('Không thể tải báo cáo')),
+              loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
+              error: (error, _) => Center(child: Text('Không thể tải báo cáo', style: TextStyle(color: n.textPrimary))),
               data: (data) => RefreshIndicator(
                 onRefresh: () async {
                   if (_isCustom && _customRange != null) {
@@ -112,13 +119,13 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    SizedBox(height: 220, child: _ProfitBarChart(buckets: data.chartBuckets)),
+                    SizedBox(height: 220, child: _ProfitBarChart(buckets: data.chartBuckets, neutrals: n)),
                     const SizedBox(height: 20),
-                    _SummaryCard(periodLabel: _summaryLabel, data: data),
+                    _SummaryCard(periodLabel: _summaryLabel, data: data, neutrals: n),
                     const SizedBox(height: 20),
-                    const Text('Chi tiết theo ngày', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text('Chi tiết theo ngày', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                     const SizedBox(height: 8),
-                    _DailyProfitTable(days: data.days),
+                    _DailyProfitTable(days: data.days, neutrals: n),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -133,13 +140,14 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
 
 class _ProfitBarChart extends StatelessWidget {
   final List<ProfitBucket> buckets;
+  final ScreenNeutrals neutrals;
 
-  const _ProfitBarChart({required this.buckets});
+  const _ProfitBarChart({required this.buckets, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
     if (buckets.isEmpty || buckets.every((b) => b.income == 0 && b.expense == 0)) {
-      return const Center(child: Text('Chưa có giao dịch trong kỳ này', style: TextStyle(color: AppColors.textSecondary)));
+      return Center(child: Text('Chưa có giao dịch trong kỳ này', style: TextStyle(color: neutrals.textSecondary)));
     }
     final maxVal = buckets.fold<num>(1, (m, b) => b.profit.abs() > m ? b.profit.abs() : m);
     final labelEvery = (buckets.length / 8).ceil().clamp(1, 100);
@@ -162,7 +170,7 @@ class _ProfitBarChart extends StatelessWidget {
                 if (i < 0 || i >= buckets.length || i % labelEvery != 0) return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text(buckets[i].label, style: const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+                  child: Text(buckets[i].label, style: TextStyle(fontSize: 9, color: neutrals.textSecondary)),
                 );
               },
             ),
@@ -199,30 +207,28 @@ class _ProfitBarChart extends StatelessWidget {
 class _SummaryCard extends StatelessWidget {
   final String periodLabel;
   final DailyProfitData data;
+  final ScreenNeutrals neutrals;
 
-  const _SummaryCard({required this.periodLabel, required this.data});
+  const _SummaryCard({required this.periodLabel, required this.data, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
+      decoration: neutrals.cardDecoration(radius: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Tổng quan $periodLabel', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          Text('Tổng quan $periodLabel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: neutrals.textPrimary)),
           const SizedBox(height: 12),
-          _SummaryRow(icon: Icons.arrow_downward, label: 'Tổng doanh thu', amount: data.totalIncome, color: AppColors.income),
-          _SummaryRow(icon: Icons.arrow_upward, label: 'Tổng chi phí', amount: data.totalExpense, color: AppColors.expense),
+          _SummaryRow(icon: Icons.arrow_downward, label: 'Tổng doanh thu', amount: data.totalIncome, color: AppColors.income, neutrals: neutrals),
+          _SummaryRow(icon: Icons.arrow_upward, label: 'Tổng chi phí', amount: data.totalExpense, color: AppColors.expense, neutrals: neutrals),
           _SummaryRow(
             icon: data.totalProfit >= 0 ? Icons.trending_up : Icons.trending_down,
             label: 'Lợi nhuận',
             amount: data.totalProfit,
             color: data.totalProfit >= 0 ? AppColors.primary : AppColors.error,
+            neutrals: neutrals,
           ),
         ],
       ),
@@ -235,8 +241,9 @@ class _SummaryRow extends StatelessWidget {
   final String label;
   final num amount;
   final Color color;
+  final ScreenNeutrals neutrals;
 
-  const _SummaryRow({required this.icon, required this.label, required this.amount, required this.color});
+  const _SummaryRow({required this.icon, required this.label, required this.amount, required this.color, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +253,7 @@ class _SummaryRow extends StatelessWidget {
         children: [
           CircleAvatar(radius: 15, backgroundColor: color.withValues(alpha: 0.12), child: Icon(icon, size: 15, color: color)),
           const SizedBox(width: 10),
-          Expanded(child: Text(label)),
+          Expanded(child: Text(label, style: TextStyle(color: neutrals.textPrimary))),
           Text(formatVND(amount), style: TextStyle(fontWeight: FontWeight.bold, color: color)),
         ],
       ),
@@ -256,8 +263,9 @@ class _SummaryRow extends StatelessWidget {
 
 class _DailyProfitTable extends StatelessWidget {
   final List<DailySummary> days;
+  final ScreenNeutrals neutrals;
 
-  const _DailyProfitTable({required this.days});
+  const _DailyProfitTable({required this.days, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -265,17 +273,13 @@ class _DailyProfitTable extends StatelessWidget {
     // doesn't drown the days that actually had transactions.
     final rows = days.reversed.where((d) => d.income != 0 || d.expense != 0).toList();
     if (rows.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Text('Chưa có ngày nào có giao dịch', style: TextStyle(color: AppColors.textSecondary)),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text('Chưa có ngày nào có giao dịch', style: TextStyle(color: neutrals.textSecondary)),
       );
     }
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
+      decoration: neutrals.cardDecoration(radius: 16),
       clipBehavior: Clip.antiAlias,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -283,6 +287,7 @@ class _DailyProfitTable extends StatelessWidget {
           headingRowHeight: 40,
           dataRowMinHeight: 40,
           dataRowMaxHeight: 44,
+          headingTextStyle: TextStyle(color: neutrals.textPrimary, fontWeight: FontWeight.bold),
           columns: const [
             DataColumn(label: Text('Ngày')),
             DataColumn(label: Text('Thu'), numeric: true),
@@ -291,7 +296,7 @@ class _DailyProfitTable extends StatelessWidget {
           ],
           rows: rows
               .map((d) => DataRow(cells: [
-                    DataCell(Text(DateFormat('dd/MM/yyyy').format(d.date))),
+                    DataCell(Text(DateFormat('dd/MM/yyyy').format(d.date), style: TextStyle(color: neutrals.textPrimary))),
                     DataCell(Text(formatVND(d.income), style: const TextStyle(color: AppColors.income))),
                     DataCell(Text(formatVND(d.expense), style: const TextStyle(color: AppColors.expense))),
                     DataCell(Text(

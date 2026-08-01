@@ -4,9 +4,13 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../data/shift_repository.dart';
 import '../domain/shift.dart';
@@ -21,10 +25,13 @@ class ShiftScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentAsync = ref.watch(currentShiftProvider);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.shift, style);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Ca làm việc')),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Ca làm việc', accent: accent),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(currentShiftProvider);
@@ -34,37 +41,37 @@ class ShiftScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             currentAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
+              loading: () => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
               ),
               error: (error, _) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Column(
                   children: [
-                    const Text('Không thể tải ca làm việc'),
+                    Text('Không thể tải ca làm việc', style: TextStyle(color: n.textPrimary)),
                     const SizedBox(height: 8),
                     OutlinedButton(onPressed: () => ref.invalidate(currentShiftProvider), child: const Text('Thử lại')),
                   ],
                 ),
               ),
-              data: (shift) => shift == null ? const _NoOpenShiftCard() : _OpenShiftCard(shift: shift),
+              data: (shift) => shift == null ? _NoOpenShiftCard(neutrals: n, accent: accent) : _OpenShiftCard(shift: shift, neutrals: n, accent: accent),
             ),
             const SizedBox(height: 24),
-            const Text('Lịch sử ca làm việc', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text('Lịch sử ca làm việc', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
             const SizedBox(height: 12),
             Consumer(
               builder: (context, ref, _) {
                 final historyAsync = ref.watch(shiftHistoryProvider);
                 return historyAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => const Text('Không thể tải lịch sử'),
+                  loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
+                  error: (error, _) => Text('Không thể tải lịch sử', style: TextStyle(color: n.textPrimary)),
                   data: (shifts) {
                     final closed = shifts.where((s) => !s.isOpen).toList();
                     if (closed.isEmpty) {
-                      return const EmptyStateWidget(icon: Icons.badge_outlined, message: 'Chưa có ca làm việc nào đã kết thúc.');
+                      return EmptyStateWidget(icon: Icons.badge_outlined, message: 'Chưa có ca làm việc nào đã kết thúc.', accent: accent);
                     }
-                    return Column(children: closed.map((s) => _ShiftHistoryTile(shift: s)).toList());
+                    return Column(children: closed.map((s) => _ShiftHistoryTile(shift: s, neutrals: n)).toList());
                   },
                 );
               },
@@ -77,32 +84,32 @@ class ShiftScreen extends ConsumerWidget {
 }
 
 class _NoOpenShiftCard extends ConsumerWidget {
-  const _NoOpenShiftCard();
+  final ScreenNeutrals neutrals;
+  final Color accent;
+
+  const _NoOpenShiftCard({required this.neutrals, required this.accent});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+      decoration: neutrals.cardDecoration(radius: 16),
       child: Column(
         children: [
-          const Icon(Icons.badge_outlined, size: 40, color: AppColors.textSecondary),
+          Icon(Icons.badge_outlined, size: 40, color: neutrals.textSecondary),
           const SizedBox(height: 12),
-          const Text('Bạn chưa mở ca làm việc', style: TextStyle(fontWeight: FontWeight.w600)),
+          Text('Bạn chưa mở ca làm việc', style: TextStyle(fontWeight: FontWeight.w600, color: neutrals.textPrimary)),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Mở ca để chốt số dư đầu ca, theo dõi thu/chi trong ca và chốt số dư cuối ca.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: neutrals.textSecondary),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: accent),
               icon: const Icon(Icons.play_arrow_rounded),
               label: const Text('Mở ca làm việc'),
               onPressed: () => _openShift(context, ref),
@@ -135,16 +142,19 @@ class _NoOpenShiftCard extends ConsumerWidget {
 
 class _OpenShiftCard extends ConsumerWidget {
   final Shift shift;
+  final ScreenNeutrals neutrals;
+  final Color accent;
 
-  const _OpenShiftCard({required this.shift});
+  const _OpenShiftCard({required this.shift, required this.neutrals, required this.accent});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: AppColors.headerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(colors: neutrals.isGame ? [accent, Color.lerp(accent, Colors.black, 0.35)!] : AppColors.heroGradient(accent), begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: neutrals.isGame ? [BoxShadow(color: accent.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))] : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,7 +207,7 @@ class _OpenShiftCard extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primaryDark),
+              style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: accent),
               icon: const Icon(Icons.stop_circle_outlined),
               label: const Text('Kết thúc ca làm việc'),
               onPressed: () => _closeShift(context, ref),
@@ -249,19 +259,16 @@ class _StatColumn extends StatelessWidget {
 
 class _ShiftHistoryTile extends StatelessWidget {
   final Shift shift;
+  final ScreenNeutrals neutrals;
 
-  const _ShiftHistoryTile({required this.shift});
+  const _ShiftHistoryTile({required this.shift, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+      decoration: neutrals.cardDecoration(radius: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -270,11 +277,11 @@ class _ShiftHistoryTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${DateFormat('HH:mm dd/MM').format(shift.openedAt)} → ${shift.closedAt != null ? DateFormat('HH:mm dd/MM').format(shift.closedAt!) : ''}',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: neutrals.textPrimary),
                 ),
               ),
               if (shift.userName != null && shift.userName!.isNotEmpty)
-                Text(shift.userName!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                Text(shift.userName!, style: TextStyle(fontSize: 11, color: neutrals.textSecondary)),
             ],
           ),
           const SizedBox(height: 8),
@@ -283,12 +290,12 @@ class _ShiftHistoryTile extends StatelessWidget {
             children: [
               Text('Thu: ${formatVND(shift.incomeDuringShift)}', style: const TextStyle(fontSize: 12, color: AppColors.income)),
               Text('Chi: ${formatVND(shift.expenseDuringShift)}', style: const TextStyle(fontSize: 12, color: AppColors.expense)),
-              Text('Ròng: ${formatVND(shift.netDuringShift)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('Ròng: ${formatVND(shift.netDuringShift)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: neutrals.textPrimary)),
             ],
           ),
           if (shift.note != null && shift.note!.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(shift.note!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
+            Text(shift.note!, style: TextStyle(fontSize: 11, color: neutrals.textSecondary, fontStyle: FontStyle.italic)),
           ],
         ],
       ),

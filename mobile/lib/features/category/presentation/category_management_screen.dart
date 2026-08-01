@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../data/category_repository.dart';
 import '../domain/category.dart';
@@ -26,11 +30,14 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(_group == 'income' ? incomeCategoriesProvider : expenseCategoriesProvider);
-    final accent = _group == 'income' ? AppColors.income : AppColors.expense;
+    final typeColor = _group == 'income' ? AppColors.income : AppColors.expense;
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.category, style);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Danh mục')),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Danh mục', accent: accent),
       body: Column(
         children: [
           Padding(
@@ -46,8 +53,8 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
           ),
           Expanded(
             child: categoriesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => const Center(child: Text('Không thể tải danh mục')),
+              loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
+              error: (error, _) => Center(child: Text('Không thể tải danh mục', style: TextStyle(color: n.textPrimary))),
               data: (categories) => RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(incomeCategoriesProvider);
@@ -60,19 +67,15 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
                   itemBuilder: (context, index) {
                     final c = categories[index];
                     return Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
-                      ),
+                      decoration: n.cardDecoration(radius: 12),
                       child: ListTile(
-                        leading: CircleAvatar(backgroundColor: accent.withValues(alpha: 0.12), child: Icon(categoryIconFor(c.icon), color: accent)),
-                        title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        leading: CircleAvatar(backgroundColor: typeColor.withValues(alpha: 0.12), child: Icon(categoryIconFor(c.icon), color: typeColor)),
+                        title: Text(c.name, style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 20),
+                              icon: Icon(Icons.edit_outlined, size: 20, color: n.textSecondary),
                               onPressed: () => _showRenameSheet(context, c),
                             ),
                             IconButton(
@@ -91,6 +94,8 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: accent,
+        foregroundColor: Colors.white,
         onPressed: () => _showAddCategorySheet(context),
         icon: const Icon(Icons.add),
         label: const Text('Thêm danh mục'),

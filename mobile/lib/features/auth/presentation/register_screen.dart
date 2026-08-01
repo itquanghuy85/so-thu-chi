@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import 'auth_hero_header.dart';
 import 'auth_notifier.dart';
 import 'social_sign_in_buttons.dart';
@@ -84,8 +86,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dashboard, style);
+
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: n.surface,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,7 +110,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     TextFormField(
                       controller: _fullNameController,
                       textCapitalization: TextCapitalization.words,
-                      decoration: authFieldDecoration(label: 'Họ tên', icon: Icons.person_outline),
+                      style: TextStyle(color: n.textPrimary),
+                      decoration: authFieldDecoration(label: 'Họ tên', icon: Icons.person_outline, neutrals: n, accent: accent),
                       validator: _validateFullName,
                     ),
                     const SizedBox(height: 14),
@@ -113,7 +120,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       enableSuggestions: false,
-                      decoration: authFieldDecoration(label: 'Email', icon: Icons.mail_outline),
+                      style: TextStyle(color: n.textPrimary),
+                      decoration: authFieldDecoration(label: 'Email', icon: Icons.mail_outline, neutrals: n, accent: accent),
                       validator: _validateEmail,
                     ),
                     const SizedBox(height: 14),
@@ -122,9 +130,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       obscureText: _obscurePassword,
                       autocorrect: false,
                       enableSuggestions: false,
+                      style: TextStyle(color: n.textPrimary),
                       decoration: authFieldDecoration(
                         label: 'Mật khẩu',
                         icon: Icons.lock_outline,
+                        neutrals: n,
+                        accent: accent,
                         suffixIcon: IconButton(
                           icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
                           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -133,11 +144,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       validator: _validatePassword,
                     ),
                     const SizedBox(height: 6),
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
                       child: Text(
                         'Ít nhất 8 ký tự, gồm chữ hoa, số và ký hiệu',
-                        style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 11.5, color: n.textSecondary),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -146,7 +157,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       obscureText: _obscurePassword,
                       autocorrect: false,
                       enableSuggestions: false,
-                      decoration: authFieldDecoration(label: 'Xác nhận mật khẩu', icon: Icons.lock_outline),
+                      style: TextStyle(color: n.textPrimary),
+                      decoration: authFieldDecoration(label: 'Xác nhận mật khẩu', icon: Icons.lock_outline, neutrals: n, accent: accent),
                       validator: _validateConfirmPassword,
                     ),
                     const SizedBox(height: 24),

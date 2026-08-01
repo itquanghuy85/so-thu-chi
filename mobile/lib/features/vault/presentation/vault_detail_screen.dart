@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/section_app_bar.dart';
@@ -26,10 +29,13 @@ class VaultDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(_vaultTransactionsProvider(vault.id));
     final color = AppColors.forKey(vault.id);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.vaults, style);
 
     return Scaffold(
-      backgroundColor: AppColors.tint(AppColors.secondary),
-      appBar: SectionAppBar(title: vault.name, accent: AppColors.secondary),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: vault.name, accent: accent),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(_vaultTransactionsProvider(vault.id)),
         child: ListView(
@@ -74,36 +80,32 @@ class VaultDetailScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-              ),
+              decoration: n.cardDecoration(radius: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Biến động 14 ngày qua', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text('Biến động 14 ngày qua', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 130,
                     child: transactionsAsync.when(
                       loading: () => const SizedBox.shrink(),
                       error: (error, _) => const SizedBox.shrink(),
-                      data: (transactions) => _BalanceTrendChart(vault: vault, transactions: transactions, color: color),
+                      data: (transactions) => _BalanceTrendChart(vault: vault, transactions: transactions, color: color, neutrals: n),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Lịch sử giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text('Lịch sử giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
             const SizedBox(height: 8),
             transactionsAsync.when(
-              loading: () => const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: CircularProgressIndicator())),
-              error: (error, _) => const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Text('Không thể tải giao dịch', style: TextStyle(color: AppColors.textSecondary))),
+              loading: () => Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator(color: n.isGame ? accent : null))),
+              error: (error, _) => Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text('Không thể tải giao dịch', style: TextStyle(color: n.textSecondary))),
               data: (transactions) {
                 if (transactions.isEmpty) {
-                  return const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Text('Chưa có giao dịch nào trên túi này.', style: TextStyle(color: AppColors.textSecondary)));
+                  return Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text('Chưa có giao dịch nào trên túi này.', style: TextStyle(color: n.textSecondary)));
                 }
                 return Column(
                   children: transactions
@@ -134,8 +136,9 @@ class _BalanceTrendChart extends StatelessWidget {
   final Vault vault;
   final List<Transaction> transactions;
   final Color color;
+  final ScreenNeutrals neutrals;
 
-  const _BalanceTrendChart({required this.vault, required this.transactions, required this.color});
+  const _BalanceTrendChart({required this.vault, required this.transactions, required this.color, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +169,7 @@ class _BalanceTrendChart extends StatelessWidget {
     }
 
     if (transactions.isEmpty) {
-      return const Center(child: Text('Chưa có dữ liệu', style: TextStyle(color: AppColors.textSecondary)));
+      return Center(child: Text('Chưa có dữ liệu', style: TextStyle(color: neutrals.textSecondary)));
     }
 
     return LineChart(

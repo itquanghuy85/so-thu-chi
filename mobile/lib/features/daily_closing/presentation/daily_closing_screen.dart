@@ -4,10 +4,14 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../vault/data/vault_repository.dart';
 import '../data/daily_closing_repository.dart';
 import '../domain/daily_closing.dart';
@@ -22,10 +26,13 @@ class DailyClosingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final todayAsync = ref.watch(dailyClosingTodayProvider);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dailyClosing, style);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Chốt sổ cuối ngày')),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Chốt sổ cuối ngày', accent: accent),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(dailyClosingTodayProvider);
@@ -35,36 +42,36 @@ class DailyClosingScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             todayAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
+              loading: () => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
               ),
               error: (error, _) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Column(
                   children: [
-                    const Text('Không thể tải trạng thái chốt sổ'),
+                    Text('Không thể tải trạng thái chốt sổ', style: TextStyle(color: n.textPrimary)),
                     const SizedBox(height: 8),
                     OutlinedButton(onPressed: () => ref.invalidate(dailyClosingTodayProvider), child: const Text('Thử lại')),
                   ],
                 ),
               ),
-              data: (closing) => closing != null ? _ClosedTodayCard(closing: closing) : const _CloseTodayForm(),
+              data: (closing) => closing != null ? _ClosedTodayCard(closing: closing, neutrals: n, accent: accent) : const _CloseTodayForm(),
             ),
             const SizedBox(height: 24),
-            const Text('Lịch sử chốt sổ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text('Lịch sử chốt sổ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
             const SizedBox(height: 12),
             Consumer(
               builder: (context, ref, _) {
                 final historyAsync = ref.watch(dailyClosingHistoryProvider);
                 return historyAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => const Text('Không thể tải lịch sử'),
+                  loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
+                  error: (error, _) => Text('Không thể tải lịch sử', style: TextStyle(color: n.textPrimary)),
                   data: (items) {
                     if (items.isEmpty) {
-                      return const EmptyStateWidget(icon: Icons.fact_check_outlined, message: 'Chưa có lần chốt sổ nào.');
+                      return EmptyStateWidget(icon: Icons.fact_check_outlined, message: 'Chưa có lần chốt sổ nào.', accent: accent);
                     }
-                    return Column(children: items.map((c) => _ClosingHistoryTile(closing: c)).toList());
+                    return Column(children: items.map((c) => _ClosingHistoryTile(closing: c, neutrals: n)).toList());
                   },
                 );
               },
@@ -125,32 +132,31 @@ class _CloseTodayFormState extends ConsumerState<_CloseTodayForm> {
   Widget build(BuildContext context) {
     final workspaceId = ref.watch(currentWorkspaceIdProvider);
     final vaultsAsync = ref.watch(vaultListProvider);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dailyClosing, style);
 
     return vaultsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => const Text('Không thể tải danh sách túi tiền'),
+      loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
+      error: (error, _) => Text('Không thể tải danh sách túi tiền', style: TextStyle(color: n.textPrimary)),
       data: (vaults) {
         if (vaults.isEmpty) {
-          return const EmptyStateWidget(icon: Icons.account_balance_wallet_outlined, message: 'Chưa có túi tiền để chốt sổ.');
+          return EmptyStateWidget(icon: Icons.account_balance_wallet_outlined, message: 'Chưa có túi tiền để chốt sổ.', accent: accent);
         }
         for (final v in vaults) {
           _controllers.putIfAbsent(v.id, () => TextEditingController(text: formatVND(v.currentBalance).replaceAll('đ', '')));
         }
         return Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-          ),
+          decoration: n.cardDecoration(radius: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Đếm số dư thực tế từng túi tiền', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              Text('Đếm số dư thực tế từng túi tiền', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: n.textPrimary)),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Hệ thống sẽ so sánh với số dư sổ sách và ghi nhận chênh lệch (nếu có).',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 12, color: n.textSecondary),
               ),
               const SizedBox(height: 16),
               ...vaults.map((v) => Padding(
@@ -159,6 +165,7 @@ class _CloseTodayFormState extends ConsumerState<_CloseTodayForm> {
                   )),
               TextField(
                 controller: _noteController,
+                style: TextStyle(color: n.textPrimary),
                 decoration: InputDecoration(labelText: 'Ghi chú (không bắt buộc)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                 maxLines: 2,
               ),
@@ -166,6 +173,7 @@ class _CloseTodayFormState extends ConsumerState<_CloseTodayForm> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
+                  style: FilledButton.styleFrom(backgroundColor: accent),
                   icon: const Icon(Icons.fact_check_outlined),
                   label: _saving
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -183,16 +191,19 @@ class _CloseTodayFormState extends ConsumerState<_CloseTodayForm> {
 
 class _ClosedTodayCard extends StatelessWidget {
   final DailyClosing closing;
+  final ScreenNeutrals neutrals;
+  final Color accent;
 
-  const _ClosedTodayCard({required this.closing});
+  const _ClosedTodayCard({required this.closing, required this.neutrals, required this.accent});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: AppColors.headerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(colors: neutrals.isGame ? [accent, Color.lerp(accent, Colors.black, 0.35)!] : AppColors.heroGradient(accent), begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: neutrals.isGame ? [BoxShadow(color: accent.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))] : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,8 +243,9 @@ class _ClosedTodayCard extends StatelessWidget {
 
 class _ClosingHistoryTile extends StatelessWidget {
   final DailyClosing closing;
+  final ScreenNeutrals neutrals;
 
-  const _ClosingHistoryTile({required this.closing});
+  const _ClosingHistoryTile({required this.closing, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -241,20 +253,16 @@ class _ClosingHistoryTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+      decoration: neutrals.cardDecoration(radius: 14),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(DateFormat('dd/MM/yyyy').format(DateTime.parse(closing.closingDate)), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                Text(DateFormat('dd/MM/yyyy').format(DateTime.parse(closing.closingDate)), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: neutrals.textPrimary)),
                 const SizedBox(height: 2),
-                Text('${closing.entries.length} túi tiền • ${closing.closedByName}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                Text('${closing.entries.length} túi tiền • ${closing.closedByName}', style: TextStyle(fontSize: 11, color: neutrals.textSecondary)),
               ],
             ),
           ),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import 'auth_hero_header.dart';
 import 'auth_notifier.dart';
 import 'social_sign_in_buttons.dart';
@@ -62,8 +64,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dashboard, style);
+
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: n.surface,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -78,14 +84,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Đăng nhập', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                    Text('Đăng nhập', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: n.textPrimary)),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       enableSuggestions: false,
-                      decoration: authFieldDecoration(label: 'Email', icon: Icons.mail_outline),
+                      style: TextStyle(color: n.textPrimary),
+                      decoration: authFieldDecoration(label: 'Email', icon: Icons.mail_outline, neutrals: n, accent: accent),
                       validator: _validateEmail,
                     ),
                     const SizedBox(height: 14),
@@ -94,9 +101,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       obscureText: _obscurePassword,
                       autocorrect: false,
                       enableSuggestions: false,
+                      style: TextStyle(color: n.textPrimary),
                       decoration: authFieldDecoration(
                         label: 'Mật khẩu',
                         icon: Icons.lock_outline,
+                        neutrals: n,
+                        accent: accent,
                         suffixIcon: IconButton(
                           icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
                           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -111,11 +121,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: TextButton(
                         onPressed: () => context.push('/register'),
                         child: RichText(
-                          text: const TextSpan(
-                            style: TextStyle(fontSize: 13.5, color: AppColors.textSecondary),
+                          text: TextSpan(
+                            style: TextStyle(fontSize: 13.5, color: n.textSecondary),
                             children: [
-                              TextSpan(text: 'Chưa có tài khoản? '),
-                              TextSpan(text: 'Đăng ký ngay', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                              const TextSpan(text: 'Chưa có tài khoản? '),
+                              TextSpan(text: 'Đăng ký ngay', style: TextStyle(color: accent, fontWeight: FontWeight.w700)),
                             ],
                           ),
                         ),

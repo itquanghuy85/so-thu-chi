@@ -4,10 +4,14 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../../debt/domain/customer.dart';
 import '../../transaction/domain/transaction.dart';
@@ -28,33 +32,37 @@ class RecurringListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recurringAsync = ref.watch(recurringListProvider);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.recurring, style);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Giao dịch định kỳ')),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Giao dịch định kỳ', accent: accent),
       body: recurringAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
         error: (error, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Không thể tải danh sách'),
+              Text('Không thể tải danh sách', style: TextStyle(color: n.textPrimary)),
               const SizedBox(height: 8),
               OutlinedButton(onPressed: () => ref.invalidate(recurringListProvider), child: const Text('Thử lại')),
             ],
           ),
         ),
         data: (items) => items.isEmpty
-            ? const EmptyStateWidget(
+            ? EmptyStateWidget(
                 icon: Icons.repeat_rounded,
                 message: 'Chưa có giao dịch định kỳ nào.\nThêm tiền thuê, lương nhân viên... để tự động ghi sổ mỗi kỳ.',
+                accent: accent,
               )
             : RefreshIndicator(
                 onRefresh: () async => ref.invalidate(recurringListProvider),
                 child: ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
-                  itemBuilder: (context, i) => _RecurringTile(item: items[i]),
+                  itemBuilder: (context, i) => _RecurringTile(item: items[i], neutrals: n),
                 ),
               ),
       ),
@@ -76,8 +84,9 @@ class RecurringListScreen extends ConsumerWidget {
 
 class _RecurringTile extends ConsumerWidget {
   final RecurringTransaction item;
+  final ScreenNeutrals neutrals;
 
-  const _RecurringTile({required this.item});
+  const _RecurringTile({required this.item, required this.neutrals});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -88,11 +97,7 @@ class _RecurringTile extends ConsumerWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-        ),
+        decoration: neutrals.cardDecoration(radius: 14),
         child: Row(
           children: [
             CircleAvatar(radius: 20, backgroundColor: color.withValues(alpha: 0.12), child: Icon(transactionIcon(item.type), color: color)),
@@ -103,13 +108,13 @@ class _RecurringTile extends ConsumerWidget {
                 children: [
                   Text(
                     '${transactionTypeLabel(item.type)} • ${formatVND(item.amount)}',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: neutrals.textPrimary),
                   ),
-                  if (desc.isNotEmpty) Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  if (desc.isNotEmpty) Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: neutrals.textSecondary)),
                   const SizedBox(height: 4),
                   Text(
                     '${frequencyLabel(item.frequency)} • Lần tới: ${DateFormat('dd/MM/yyyy').format(item.nextRunDate)}',
-                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 11, color: neutrals.textSecondary),
                   ),
                 ],
               ),
@@ -128,7 +133,7 @@ class _RecurringTile extends ConsumerWidget {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.textSecondary, size: 20),
+              icon: Icon(Icons.delete_outline, color: neutrals.textSecondary, size: 20),
               onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,

@@ -6,6 +6,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/export/excel_export_service.dart';
 import '../../../core/offline/sync_queue_service.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
@@ -51,12 +54,15 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(transactionListProvider);
     final notifier = ref.read(transactionListProvider.notifier);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.transactions, style);
 
     return Scaffold(
-      backgroundColor: AppColors.tint(AppColors.transfer),
+      backgroundColor: n.tint(accent),
       appBar: SectionAppBar(
         title: 'Giao dịch',
-        accent: AppColors.transfer,
+        accent: accent,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',
@@ -96,11 +102,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                           notifier.setFilter(state.filter.copyWith(period: p));
                         }
                       },
-                      selectedColor: AppColors.transfer,
-                      labelStyle: TextStyle(color: selected ? Colors.white : AppColors.textPrimary, fontSize: 12),
-                      backgroundColor: AppColors.surface,
+                      selectedColor: accent,
+                      labelStyle: TextStyle(color: selected ? Colors.white : n.textPrimary, fontSize: 12),
+                      backgroundColor: n.surface,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      side: BorderSide.none,
+                      side: n.isGame ? BorderSide(color: n.divider) : BorderSide.none,
                     ),
                   );
                 }).toList(),
@@ -114,13 +120,13 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _TypeChip(label: 'Loại', selected: state.filter.type == null, icon: Icons.filter_list, onTap: () => notifier.setFilter(state.filter.copyWith(clearType: true))),
+                  _TypeChip(label: 'Loại', selected: state.filter.type == null, icon: Icons.filter_list, neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(clearType: true))),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Thu', selected: state.filter.type == TransactionType.income, color: AppColors.income, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.income))),
+                  _TypeChip(label: 'Thu', selected: state.filter.type == TransactionType.income, color: AppColors.income, neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.income))),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Chi', selected: state.filter.type == TransactionType.expense, color: AppColors.expense, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.expense))),
+                  _TypeChip(label: 'Chi', selected: state.filter.type == TransactionType.expense, color: AppColors.expense, neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.expense))),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Chuyển', selected: state.filter.type == TransactionType.transfer, color: AppColors.transfer, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.transfer))),
+                  _TypeChip(label: 'Chuyển', selected: state.filter.type == TransactionType.transfer, color: AppColors.transfer, neutrals: n, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.transfer))),
                 ],
               ),
             ),
@@ -129,15 +135,16 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           Expanded(
             child: Builder(builder: (context) {
               if (state.isLoading && state.items.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(child: CircularProgressIndicator(color: n.isGame ? accent : null));
               }
               if (state.errorMessage != null && state.items.isEmpty) {
-                return Center(child: Text(state.errorMessage!));
+                return Center(child: Text(state.errorMessage!, style: TextStyle(color: n.textPrimary)));
               }
               if (state.items.isEmpty) {
-                return const EmptyStateWidget(
+                return EmptyStateWidget(
                   message: 'Không có giao dịch nào trong bộ lọc này.',
                   icon: Icons.receipt_long_outlined,
+                  accent: accent,
                 );
               }
               return RefreshIndicator(
@@ -167,7 +174,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.transfer,
+        backgroundColor: accent,
         foregroundColor: Colors.white,
         onPressed: () async {
           final created = await showCreateTransactionSheet(context);
@@ -232,28 +239,29 @@ class _TypeChip extends StatelessWidget {
   final bool selected;
   final Color? color;
   final IconData? icon;
+  final ScreenNeutrals neutrals;
   final VoidCallback onTap;
 
-  const _TypeChip({required this.label, required this.selected, this.color, this.icon, required this.onTap});
+  const _TypeChip({required this.label, required this.selected, this.color, this.icon, required this.neutrals, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final chipColor = color ?? AppColors.textSecondary;
+    final chipColor = color ?? neutrals.textSecondary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? chipColor.withValues(alpha: 0.14) : AppColors.surface,
+          color: selected ? chipColor.withValues(alpha: 0.14) : neutrals.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? chipColor : AppColors.divider),
+          border: Border.all(color: selected ? chipColor : neutrals.divider),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[Icon(icon, size: 14, color: selected ? chipColor : AppColors.textSecondary), const SizedBox(width: 4)],
-            Text(label, style: TextStyle(fontSize: 12, color: selected ? chipColor : AppColors.textSecondary, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+            if (icon != null) ...[Icon(icon, size: 14, color: selected ? chipColor : neutrals.textSecondary), const SizedBox(width: 4)],
+            Text(label, style: TextStyle(fontSize: 12, color: selected ? chipColor : neutrals.textSecondary, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
           ],
         ),
       ),
@@ -261,14 +269,15 @@ class _TypeChip extends StatelessWidget {
   }
 }
 
-class TransactionTile extends StatelessWidget {
+class TransactionTile extends ConsumerWidget {
   final Transaction transaction;
   final VoidCallback? onTap;
 
   const TransactionTile({super.key, required this.transaction, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final n = neutralsFor(ref.watch(visualStyleProvider));
     final color = transactionColor(transaction.type);
     final timeFormat = DateFormat('HH:mm dd/MM', 'vi_VN');
     final isVoided = transaction.isVoided;
@@ -277,11 +286,7 @@ class TransactionTile extends StatelessWidget {
       opacity: isVoided ? 0.5 : 1,
       child: Container(
         margin: const EdgeInsets.only(bottom: 6),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
-        ),
+        decoration: n.cardDecoration(accent: n.isGame ? color : null),
         child: ListTile(
           onTap: onTap,
           leading: CircleAvatar(
@@ -293,7 +298,7 @@ class TransactionTile extends StatelessWidget {
               Flexible(
                 child: Text(
                   transactionTypeLabel(transaction.type) + (isVoided ? ' (đã hủy)' : ''),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -314,6 +319,7 @@ class TransactionTile extends StatelessWidget {
             [transactionDescription(transaction), timeFormat.format(transaction.createdAt)]
                 .where((s) => s.isNotEmpty)
                 .join(' • '),
+            style: TextStyle(color: n.textSecondary),
           ),
           trailing: Text(
             '${transactionAmountSign(transaction.type)}${formatVND(transaction.amount)}',
@@ -329,8 +335,10 @@ class TransactionTile extends StatelessWidget {
 /// dịch" action when the transaction is still active.
 void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction transaction) {
   final color = transactionColor(transaction.type);
+  final n = neutralsFor(ref.read(visualStyleProvider));
   showModalBottomSheet(
     context: context,
+    backgroundColor: n.surface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (sheetContext) {
       final dateFormat = DateFormat('HH:mm, dd/MM/yyyy', 'vi_VN');
@@ -356,20 +364,20 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
               Center(
                 child: Text(
                   transactionTypeLabel(transaction.type) + (transaction.isVoided ? ' • Đã hủy' : ''),
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: n.textSecondary),
                 ),
               ),
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(color: n.background, borderRadius: BorderRadius.circular(14)),
                 child: Column(
                   children: [
-                    if (transaction.fromVault != null) _DetailRow(label: 'Từ túi', value: transaction.fromVault!.name),
-                    if (transaction.toVault != null) _DetailRow(label: 'Đến túi', value: transaction.toVault!.name),
-                    if (transaction.category != null) _DetailRow(label: 'Danh mục', value: transaction.category!.name),
-                    if ((transaction.note ?? '').isNotEmpty) _DetailRow(label: 'Ghi chú', value: transaction.note!),
-                    _DetailRow(label: 'Thời gian', value: dateFormat.format(transaction.createdAt)),
+                    if (transaction.fromVault != null) _DetailRow(label: 'Từ túi', value: transaction.fromVault!.name, neutrals: n),
+                    if (transaction.toVault != null) _DetailRow(label: 'Đến túi', value: transaction.toVault!.name, neutrals: n),
+                    if (transaction.category != null) _DetailRow(label: 'Danh mục', value: transaction.category!.name, neutrals: n),
+                    if ((transaction.note ?? '').isNotEmpty) _DetailRow(label: 'Ghi chú', value: transaction.note!, neutrals: n),
+                    _DetailRow(label: 'Thời gian', value: dateFormat.format(transaction.createdAt), neutrals: n),
                   ],
                 ),
               ),
@@ -459,8 +467,9 @@ Future<String?> _promptVoidReason(BuildContext context) {
 class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
+  final ScreenNeutrals neutrals;
 
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow({required this.label, required this.value, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -469,8 +478,8 @@ class _DetailRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 100, child: Text(label, style: const TextStyle(color: AppColors.textSecondary))),
-          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
+          SizedBox(width: 100, child: Text(label, style: TextStyle(color: neutrals.textSecondary))),
+          Expanded(child: Text(value, style: TextStyle(fontWeight: FontWeight.w500, color: neutrals.textPrimary))),
         ],
       ),
     );

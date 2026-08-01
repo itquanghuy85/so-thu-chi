@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/widgets/initials_avatar.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../data/workspace_repository.dart';
 import '../domain/workspace.dart';
 
@@ -32,13 +36,16 @@ class MemberManagementScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workspaceAsync = ref.watch(_workspaceDetailProvider(workspaceId));
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.member, style);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Thành viên')),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Thành viên', accent: accent),
       body: workspaceAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => const Center(child: Text('Không thể tải thông tin')),
+        loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
+        error: (error, _) => Center(child: Text('Không thể tải thông tin', style: TextStyle(color: n.textPrimary))),
         data: (workspace) {
           final isOwner = workspace.ownerId == currentUserId;
           final members = workspace.members ?? [];
@@ -51,8 +58,9 @@ class MemberManagementScreen extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: AppColors.headerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    gradient: LinearGradient(colors: n.isGame ? [accent, Color.lerp(accent, Colors.black, 0.35)!] : AppColors.heroGradient(accent), begin: Alignment.topLeft, end: Alignment.bottomRight),
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: n.isGame ? [BoxShadow(color: accent.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))] : null,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,19 +101,15 @@ class MemberManagementScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text('${members.length} thành viên', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text('${members.length} thành viên', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                 const SizedBox(height: 8),
                 ...members.map((m) => Container(
                       margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
-                      ),
+                      decoration: n.cardDecoration(radius: 12),
                       child: ListTile(
                         leading: InitialsAvatar(name: m.fullName.isEmpty ? m.email : m.fullName),
-                        title: Text(m.fullName.isEmpty ? m.email : m.fullName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${m.email}${m.email.isNotEmpty ? ' • ' : ''}${_roleLabel(m.role)}'),
+                        title: Text(m.fullName.isEmpty ? m.email : m.fullName, style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
+                        subtitle: Text('${m.email}${m.email.isNotEmpty ? ' • ' : ''}${_roleLabel(m.role)}', style: TextStyle(color: n.textSecondary)),
                         trailing: isOwner && m.userId != currentUserId
                             ? IconButton(
                                 icon: const Icon(Icons.person_remove_outlined, color: AppColors.error),

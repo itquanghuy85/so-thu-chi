@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
@@ -22,33 +26,37 @@ class BudgetManagementScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetsAsync = ref.watch(budgetListProvider);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.budget, style);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Ngân sách')),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Ngân sách', accent: accent),
       body: budgetsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
         error: (error, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Không thể tải ngân sách'),
+              Text('Không thể tải ngân sách', style: TextStyle(color: n.textPrimary)),
               const SizedBox(height: 8),
               OutlinedButton(onPressed: () => ref.invalidate(budgetListProvider), child: const Text('Thử lại')),
             ],
           ),
         ),
         data: (budgets) => budgets.isEmpty
-            ? const EmptyStateWidget(
+            ? EmptyStateWidget(
                 icon: Icons.pie_chart_outline,
                 message: 'Chưa có ngân sách nào.\nĐặt hạn mức chi tiêu theo tháng để kiểm soát dòng tiền tốt hơn.',
+                accent: accent,
               )
             : RefreshIndicator(
                 onRefresh: () async => ref.invalidate(budgetListProvider),
                 child: ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: budgets.length,
-                  itemBuilder: (context, i) => _BudgetTile(budget: budgets[i]),
+                  itemBuilder: (context, i) => _BudgetTile(budget: budgets[i], neutrals: n),
                 ),
               ),
       ),
@@ -72,8 +80,9 @@ class BudgetManagementScreen extends ConsumerWidget {
 
 class _BudgetTile extends ConsumerWidget {
   final Budget budget;
+  final ScreenNeutrals neutrals;
 
-  const _BudgetTile({required this.budget});
+  const _BudgetTile({required this.budget, required this.neutrals});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,11 +90,7 @@ class _BudgetTile extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+      decoration: neutrals.cardDecoration(radius: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -94,11 +99,11 @@ class _BudgetTile extends ConsumerWidget {
               Expanded(
                 child: Text(
                   budget.categoryName ?? 'Tổng chi tiêu',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: neutrals.textPrimary),
                 ),
               ),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 20, color: AppColors.textSecondary),
+                icon: Icon(Icons.more_vert, size: 20, color: neutrals.textSecondary),
                 onSelected: (action) => _handleAction(context, ref, action),
                 itemBuilder: (context) => const [
                   PopupMenuItem(value: 'edit', child: Text('Sửa hạn mức')),
@@ -113,7 +118,7 @@ class _BudgetTile extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: budget.progress.clamp(0, 1).toDouble(),
               minHeight: 10,
-              backgroundColor: AppColors.divider,
+              backgroundColor: neutrals.divider,
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
@@ -121,7 +126,7 @@ class _BudgetTile extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${formatVND(budget.spentThisMonth)} / ${formatVND(budget.limitAmount)}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              Text('${formatVND(budget.spentThisMonth)} / ${formatVND(budget.limitAmount)}', style: TextStyle(fontSize: 12, color: neutrals.textSecondary)),
               Text(
                 budget.overBudget ? 'Vượt ${formatVND(budget.spentThisMonth - budget.limitAmount)}' : 'Còn lại ${formatVND(budget.remaining)}',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),

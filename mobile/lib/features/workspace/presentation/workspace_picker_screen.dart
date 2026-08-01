@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../../auth/presentation/auth_notifier.dart';
 import '../domain/workspace.dart';
@@ -27,12 +30,15 @@ class _WorkspacePickerScreenState extends ConsumerState<WorkspacePickerScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(workspaceNotifierProvider);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dashboard, style);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: n.tint(accent),
       appBar: AppBar(
         title: const Text('Không gian làm việc'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: accent,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -50,18 +56,21 @@ class _WorkspacePickerScreenState extends ConsumerState<WorkspacePickerScreen> {
       ),
       body: Builder(builder: (context) {
         if (state.isLoading && state.workspaces.isEmpty) {
-          return const _LoadingState();
+          return _LoadingState(neutrals: n, accent: accent);
         }
         if (state.errorMessage != null && state.workspaces.isEmpty) {
           return _ErrorState(
             message: state.errorMessage!,
             onRetry: () => ref.read(workspaceNotifierProvider.notifier).loadWorkspaces(),
+            neutrals: n,
           );
         }
         if (state.workspaces.isEmpty) {
           return _EmptyState(
             onCreate: (type) => _showCreateWorkspaceSheet(context, initialType: type),
             onJoin: () => _showJoinWorkspaceDialog(context),
+            neutrals: n,
+            accent: accent,
           );
         }
         return RefreshIndicator(
@@ -71,6 +80,7 @@ class _WorkspacePickerScreenState extends ConsumerState<WorkspacePickerScreen> {
             itemCount: state.workspaces.length,
             itemBuilder: (context, index) => _WorkspaceTile(
               workspace: state.workspaces[index],
+              neutrals: n,
               onTap: () => ref.read(workspaceNotifierProvider.notifier).selectWorkspace(state.workspaces[index]),
             ),
           ),
@@ -80,7 +90,7 @@ class _WorkspacePickerScreenState extends ConsumerState<WorkspacePickerScreen> {
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _showCreateWorkspaceSheet(context),
-              backgroundColor: AppColors.primary,
+              backgroundColor: accent,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add),
               label: const Text('Tạo mới'),
@@ -107,7 +117,10 @@ class _WorkspacePickerScreenState extends ConsumerState<WorkspacePickerScreen> {
 /// fades in if loading runs past a few seconds, instead of leaving the
 /// user staring at an unexplained spinner.
 class _LoadingState extends StatefulWidget {
-  const _LoadingState();
+  final ScreenNeutrals neutrals;
+  final Color accent;
+
+  const _LoadingState({required this.neutrals, required this.accent});
 
   @override
   State<_LoadingState> createState() => _LoadingStateState();
@@ -137,17 +150,17 @@ class _LoadingStateState extends State<_LoadingState> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
+          CircularProgressIndicator(color: widget.accent),
           const SizedBox(height: 20),
           AnimatedOpacity(
             opacity: _showHint ? 1 : 0,
             duration: const Duration(milliseconds: 400),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 'Đang kết nối máy chủ lần đầu, có thể mất khoảng 30–50 giây...',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                style: TextStyle(fontSize: 13, color: widget.neutrals.textSecondary, height: 1.4),
               ),
             ),
           ),
@@ -160,8 +173,9 @@ class _LoadingStateState extends State<_LoadingState> {
 class _ErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
+  final ScreenNeutrals neutrals;
 
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({required this.message, required this.onRetry, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -171,9 +185,9 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_rounded, size: 44, color: AppColors.textSecondary.withValues(alpha: 0.6)),
+            Icon(Icons.cloud_off_rounded, size: 44, color: neutrals.textSecondary.withValues(alpha: 0.6)),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+            Text(message, textAlign: TextAlign.center, style: TextStyle(color: neutrals.textSecondary)),
             const SizedBox(height: 20),
             OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Thử lại')),
           ],
@@ -191,8 +205,10 @@ class _ErrorState extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   final ValueChanged<WorkspaceType> onCreate;
   final VoidCallback onJoin;
+  final ScreenNeutrals neutrals;
+  final Color accent;
 
-  const _EmptyState({required this.onCreate, required this.onJoin});
+  const _EmptyState({required this.onCreate, required this.onJoin, required this.neutrals, required this.accent});
 
   @override
   Widget build(BuildContext context) {
@@ -205,23 +221,23 @@ class _EmptyState extends StatelessWidget {
             height: 88,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: AppColors.headerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+              gradient: LinearGradient(colors: AppColors.heroGradient(accent), begin: Alignment.topLeft, end: Alignment.bottomRight),
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10))],
+              boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10))],
             ),
             child: const Icon(Icons.workspaces_outline, size: 42, color: Colors.white),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Tạo không gian làm việc đầu tiên',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: neutrals.textPrimary),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Đây là nơi lưu toàn bộ giao dịch, túi tiền và báo cáo của bạn. Chọn loại phù hợp để bắt đầu:',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.5, color: AppColors.textSecondary, height: 1.45),
+            style: TextStyle(fontSize: 13.5, color: neutrals.textSecondary, height: 1.45),
           ),
           const SizedBox(height: 28),
           Row(
@@ -231,7 +247,8 @@ class _EmptyState extends StatelessWidget {
                   icon: Icons.storefront_rounded,
                   title: 'Cửa hàng',
                   subtitle: 'Bán hàng, quản lý kho, nhân viên',
-                  color: AppColors.primary,
+                  color: accent,
+                  neutrals: neutrals,
                   onTap: () => onCreate(WorkspaceType.shop),
                 ),
               ),
@@ -242,6 +259,7 @@ class _EmptyState extends StatelessWidget {
                   title: 'Gia đình',
                   subtitle: 'Thu chi sinh hoạt hàng ngày',
                   color: AppColors.secondary,
+                  neutrals: neutrals,
                   onTap: () => onCreate(WorkspaceType.family),
                 ),
               ),
@@ -264,9 +282,10 @@ class _ChoiceCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color color;
+  final ScreenNeutrals neutrals;
   final VoidCallback onTap;
 
-  const _ChoiceCard({required this.icon, required this.title, required this.subtitle, required this.color, required this.onTap});
+  const _ChoiceCard({required this.icon, required this.title, required this.subtitle, required this.color, required this.neutrals, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -276,10 +295,10 @@ class _ChoiceCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: neutrals.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: color.withValues(alpha: 0.18)),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: neutrals.shadow.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Column(
           children: [
@@ -291,13 +310,13 @@ class _ChoiceCard extends StatelessWidget {
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: AppColors.textPrimary)),
+            Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: neutrals.textPrimary)),
             const SizedBox(height: 4),
             Text(
               subtitle,
               textAlign: TextAlign.center,
               maxLines: 2,
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
+              style: TextStyle(fontSize: 11, color: neutrals.textSecondary, height: 1.3),
             ),
           ],
         ),
@@ -309,19 +328,16 @@ class _ChoiceCard extends StatelessWidget {
 class _WorkspaceTile extends StatelessWidget {
   final Workspace workspace;
   final VoidCallback onTap;
+  final ScreenNeutrals neutrals;
 
-  const _WorkspaceTile({required this.workspace, required this.onTap});
+  const _WorkspaceTile({required this.workspace, required this.onTap, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
     final color = workspace.type == WorkspaceType.shop ? AppColors.primary : AppColors.secondary;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
-      ),
+      decoration: neutrals.cardDecoration(radius: 16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
@@ -341,17 +357,17 @@ class _WorkspaceTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(workspace.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.textPrimary)),
+                    Text(workspace.name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: neutrals.textPrimary)),
                     const SizedBox(height: 3),
                     Text(
                       '${workspace.type == WorkspaceType.shop ? 'Cửa hàng' : 'Gia đình'}'
                       '${workspace.memberCount != null ? ' • ${workspace.memberCount} thành viên' : ''}',
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 12.5, color: neutrals.textSecondary),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              Icon(Icons.chevron_right, color: neutrals.textSecondary),
             ],
           ),
         ),
@@ -408,6 +424,7 @@ class _CreateWorkspaceSheetState extends ConsumerState<_CreateWorkspaceSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final n = neutralsFor(ref.watch(visualStyleProvider));
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -423,7 +440,7 @@ class _CreateWorkspaceSheetState extends ConsumerState<_CreateWorkspaceSheet> {
           children: [
             const Center(child: SheetDragHandle()),
             const SizedBox(height: 4),
-            const Text('Tạo không gian làm việc', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Tạo không gian làm việc', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: n.textPrimary)),
             const SizedBox(height: 18),
             Row(
               children: [
@@ -450,11 +467,12 @@ class _CreateWorkspaceSheetState extends ConsumerState<_CreateWorkspaceSheet> {
             TextFormField(
               controller: _nameController,
               autofocus: widget.initialType != null,
+              style: TextStyle(color: n.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Tên không gian làm việc',
                 hintText: _type == WorkspaceType.shop ? 'Ví dụ: Cửa hàng Minh Anh' : 'Ví dụ: Gia đình mình',
                 filled: true,
-                fillColor: AppColors.background,
+                fillColor: n.isGame ? n.surface : n.background,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
               ),
               validator: _validateName,
@@ -481,7 +499,7 @@ class _CreateWorkspaceSheetState extends ConsumerState<_CreateWorkspaceSheet> {
   }
 }
 
-class _WorkspaceTypeCard extends StatelessWidget {
+class _WorkspaceTypeCard extends ConsumerWidget {
   final String label;
   final IconData icon;
   final bool selected;
@@ -495,7 +513,10 @@ class _WorkspaceTypeCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dashboard, style);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -503,15 +524,15 @@ class _WorkspaceTypeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          border: Border.all(color: selected ? AppColors.primary : AppColors.divider, width: selected ? 2 : 1),
+          border: Border.all(color: selected ? accent : n.divider, width: selected ? 2 : 1),
           borderRadius: BorderRadius.circular(14),
-          color: selected ? AppColors.primary.withValues(alpha: 0.06) : AppColors.surface,
+          color: selected ? accent.withValues(alpha: 0.06) : n.surface,
         ),
         child: Column(
           children: [
-            Icon(icon, color: selected ? AppColors.primary : AppColors.textSecondary),
+            Icon(icon, color: selected ? accent : n.textSecondary),
             const SizedBox(height: 6),
-            Text(label, style: TextStyle(color: selected ? AppColors.primary : AppColors.textPrimary, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+            Text(label, style: TextStyle(color: selected ? accent : n.textPrimary, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
           ],
         ),
       ),

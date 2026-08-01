@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/section_app_bar.dart';
@@ -28,18 +31,22 @@ class VaultListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vaultsAsync = ref.watch(vaultListProvider);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.vaults, style);
 
     return Scaffold(
-      backgroundColor: AppColors.tint(AppColors.secondary),
-      appBar: const SectionAppBar(title: 'Túi tiền', accent: AppColors.secondary),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Túi tiền', accent: accent),
       body: vaultsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => const Center(child: Text('Không thể tải danh sách túi tiền')),
+        loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
+        error: (error, _) => Center(child: Text('Không thể tải danh sách túi tiền', style: TextStyle(color: n.textPrimary))),
         data: (vaults) {
           if (vaults.isEmpty) {
-            return const EmptyStateWidget(
+            return EmptyStateWidget(
               message: 'Chưa có túi tiền nào.\nThêm túi tiền để bắt đầu quản lý dòng tiền.',
               icon: Icons.account_balance_wallet_outlined,
+              accent: accent,
             );
           }
           final total = vaults.fold<num>(0, (s, v) => s + v.currentBalance);
@@ -52,8 +59,9 @@ class VaultListScreen extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: AppColors.heroGradient(AppColors.secondary), begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    gradient: LinearGradient(colors: n.isGame ? [accent, Color.lerp(accent, Colors.black, 0.35)!] : AppColors.heroGradient(accent), begin: Alignment.topLeft, end: Alignment.bottomRight),
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: n.isGame ? [BoxShadow(color: accent.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))] : null,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,7 +80,7 @@ class VaultListScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: accent,
         foregroundColor: Colors.white,
         onPressed: () async {
           final created = await showCreateVaultSheet(context);
@@ -94,14 +102,11 @@ class _VaultTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final n = neutralsFor(ref.watch(visualStyleProvider));
     final color = AppColors.forKey(vault.id);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+      decoration: n.cardDecoration(accent: n.isGame ? color : null),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => VaultDetailScreen(vault: vault))),
@@ -116,9 +121,9 @@ class _VaultTile extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(vault.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(vault.name, style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
                     const SizedBox(height: 2),
-                    Text(vaultTypeLabel(vault.type), style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                    Text(vaultTypeLabel(vault.type), style: TextStyle(color: n.textSecondary, fontSize: 13)),
                   ],
                 ),
               ),
@@ -127,7 +132,7 @@ class _VaultTile extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(formatVND(vault.currentBalance), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(formatVND(vault.currentBalance), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                   const SizedBox(height: 2),
                   TextButton(
                     style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24), visualDensity: VisualDensity.compact),

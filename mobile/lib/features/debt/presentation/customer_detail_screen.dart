@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/initials_avatar.dart';
 import '../../../shared/widgets/section_app_bar.dart';
@@ -22,10 +25,13 @@ class CustomerDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(_debtHistoryProvider(customer.id));
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.debt, style);
 
     return Scaffold(
-      backgroundColor: AppColors.tint(AppColors.debt),
-      appBar: SectionAppBar(title: customer.name, accent: AppColors.debt),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: customer.name, accent: accent),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(_debtHistoryProvider(customer.id));
@@ -41,8 +47,8 @@ class CustomerDetailScreen extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                    if ((customer.phone ?? '').isNotEmpty) Text(customer.phone!, style: const TextStyle(color: AppColors.textSecondary)),
+                    Text(customer.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: n.textPrimary)),
+                    if ((customer.phone ?? '').isNotEmpty) Text(customer.phone!, style: TextStyle(color: n.textSecondary)),
                   ],
                 ),
               ],
@@ -52,13 +58,14 @@ class CustomerDetailScreen extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: customer.debtBalance > 0 ? AppColors.expense.withValues(alpha: 0.08) : AppColors.income.withValues(alpha: 0.08),
+                color: customer.debtBalance > 0 ? AppColors.expense.withValues(alpha: n.isGame ? 0.16 : 0.08) : AppColors.income.withValues(alpha: n.isGame ? 0.16 : 0.08),
                 borderRadius: BorderRadius.circular(16),
+                border: n.isGame ? Border.all(color: (customer.debtBalance > 0 ? AppColors.expense : AppColors.income).withValues(alpha: 0.4)) : null,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tổng nợ hiện tại', style: TextStyle(color: AppColors.textSecondary)),
+                  Text('Tổng nợ hiện tại', style: TextStyle(color: n.textSecondary)),
                   const SizedBox(height: 4),
                   Text(
                     formatVND(customer.debtBalance),
@@ -80,45 +87,40 @@ class CustomerDetailScreen extends ConsumerWidget {
                 final totalPaid = entries.where((e) => e.type == 'debt_decrease').fold<num>(0, (s, e) => s + e.amount);
                 return Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-                  ),
+                  decoration: n.cardDecoration(radius: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Thông tin khác', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text('Thông tin khác', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                       const SizedBox(height: 10),
                       if (customer.createdAt != null)
-                        _InfoRow(label: 'Ngày tạo', value: DateFormat('dd/MM/yyyy', 'vi_VN').format(customer.createdAt!)),
-                      _InfoRow(label: 'Tổng đã mua (bán thiếu)', value: formatVND(totalBought)),
-                      _InfoRow(label: 'Tổng đã trả', value: formatVND(totalPaid)),
+                        _InfoRow(label: 'Ngày tạo', value: DateFormat('dd/MM/yyyy', 'vi_VN').format(customer.createdAt!), neutrals: n),
+                      _InfoRow(label: 'Tổng đã mua (bán thiếu)', value: formatVND(totalBought), neutrals: n),
+                      _InfoRow(label: 'Tổng đã trả', value: formatVND(totalPaid), neutrals: n),
                     ],
                   ),
                 );
               },
             ),
             const SizedBox(height: 16),
-            const Text('Lịch sử giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text('Lịch sử giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
             const SizedBox(height: 8),
             historyAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: CircularProgressIndicator()),
+              loading: () => Center(
+                child: Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: CircularProgressIndicator(color: n.isGame ? accent : null)),
               ),
-              error: (error, _) => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Không thể tải lịch sử', style: TextStyle(color: AppColors.textSecondary)),
+              error: (error, _) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text('Không thể tải lịch sử', style: TextStyle(color: n.textSecondary)),
               ),
               data: (entries) {
                 if (entries.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text('Chưa có giao dịch công nợ nào.', style: TextStyle(color: AppColors.textSecondary)),
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text('Chưa có giao dịch công nợ nào.', style: TextStyle(color: n.textSecondary)),
                   );
                 }
-                return Column(children: entries.map((e) => _HistoryTile(entry: e)).toList());
+                return Column(children: entries.map((e) => _HistoryTile(entry: e, neutrals: n)).toList());
               },
             ),
             const SizedBox(height: 90),
@@ -126,7 +128,8 @@ class CustomerDetailScreen extends ConsumerWidget {
         ),
       ),
       bottomNavigationBar: SafeArea(
-        child: Padding(
+        child: Container(
+          color: n.surface,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Row(
             children: [
@@ -134,7 +137,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.receipt_long_outlined),
                   label: const Text('Tạo đơn bán thiếu'),
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), foregroundColor: AppColors.debt),
+                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), foregroundColor: accent),
                   onPressed: () async {
                     final created = await showCreateTransactionSheet(context, initialTabIndex: 3);
                     if (created == true) {
@@ -175,8 +178,9 @@ final _debtHistoryProvider =
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
+  final ScreenNeutrals neutrals;
 
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({required this.label, required this.value, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -185,8 +189,8 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(label, style: TextStyle(color: neutrals.textSecondary)),
+          Text(value, style: TextStyle(fontWeight: FontWeight.w600, color: neutrals.textPrimary)),
         ],
       ),
     );
@@ -195,8 +199,9 @@ class _InfoRow extends StatelessWidget {
 
 class _HistoryTile extends StatelessWidget {
   final DebtHistoryEntry entry;
+  final ScreenNeutrals neutrals;
 
-  const _HistoryTile({required this.entry});
+  const _HistoryTile({required this.entry, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -208,12 +213,13 @@ class _HistoryTile extends StatelessWidget {
         backgroundColor: color.withValues(alpha: 0.12),
         child: Icon(isIncrease ? Icons.shopping_cart_outlined : Icons.attach_money, color: color, size: 18),
       ),
-      title: Text(isIncrease ? 'Bán thiếu' : 'Trả nợ'),
+      title: Text(isIncrease ? 'Bán thiếu' : 'Trả nợ', style: TextStyle(color: neutrals.textPrimary)),
       subtitle: Text(
         [
           DateFormat('HH:mm dd/MM/yyyy', 'vi_VN').format(entry.createdAt),
           if ((entry.note ?? '').isNotEmpty) entry.note!,
         ].join(' • '),
+        style: TextStyle(color: neutrals.textSecondary),
       ),
       trailing: Text(
         '${isIncrease ? '+' : '-'}${formatVND(entry.amount)}',

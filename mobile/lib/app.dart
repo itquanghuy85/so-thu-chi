@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/constants/app_colors.dart';
+import 'core/constants/dark_colors.dart';
+import 'core/constants/game_colors.dart';
+import 'core/theme/visual_style_provider.dart';
 import 'features/auth/presentation/auth_notifier.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/register_screen.dart';
@@ -110,43 +113,89 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
+/// Builds the app's [ThemeData] for the given visual style — this is what
+/// makes *native* Flutter/Material chrome (AlertDialog, DatePicker,
+/// DropdownMenu, TextField selection handles, ...) automatically follow
+/// Cổ điển/Tối/Game Leon too, without every individual `showDialog` call
+/// site needing its own color overrides.
+ThemeData _buildTheme(AppVisualStyle style) {
+  final (seed, background, surface, textPrimary, brightness) = switch (style) {
+    AppVisualStyle.dark => (DarkColors.primary, DarkColors.background, DarkColors.surface, DarkColors.textPrimary, Brightness.dark),
+    AppVisualStyle.gameLeon => (GameColors.cyan, GameColors.bgTop, GameColors.surface, GameColors.textPrimary, Brightness.dark),
+    AppVisualStyle.classic => (AppColors.primary, AppColors.background, AppColors.surface, AppColors.textPrimary, Brightness.light),
+  };
+  // Game Leon's own background is already the darkest layer, so its
+  // "sunken field" fill needs to step up to the surface tone instead of
+  // trying to go a shade darker than the scaffold.
+  final fieldFill = style == AppVisualStyle.gameLeon ? surface : background;
+
+  return ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    colorSchemeSeed: seed,
+    scaffoldBackgroundColor: background,
+    appBarTheme: AppBarTheme(
+      backgroundColor: surface,
+      foregroundColor: textPrimary,
+      elevation: 0,
+    ),
+    cardTheme: CardThemeData(
+      elevation: 0,
+      color: surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: surface,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: fieldFill,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: seed, width: 1.6)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.error, width: 1.2)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.error, width: 1.6)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+  );
+}
+
 class MoneyFlowApp extends ConsumerWidget {
   const MoneyFlowApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
+    final style = ref.watch(visualStyleProvider);
 
     return MaterialApp.router(
       title: 'Sổ Thu Chi',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: AppColors.primary,
-        scaffoldBackgroundColor: AppColors.background,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.surface,
-          foregroundColor: AppColors.textPrimary,
-          elevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          color: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      ),
+      theme: _buildTheme(style),
       builder: (context, child) => AppLockGate(child: child ?? const SizedBox.shrink()),
       routerConfig: router,
     );

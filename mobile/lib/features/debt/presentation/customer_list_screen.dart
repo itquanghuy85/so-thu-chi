@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/export/excel_export_service.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/initials_avatar.dart';
@@ -33,12 +36,15 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   @override
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(customerListProvider);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.debt, style);
 
     return Scaffold(
-      backgroundColor: AppColors.tint(AppColors.debt),
+      backgroundColor: n.tint(accent),
       appBar: SectionAppBar(
         title: 'Công nợ',
-        accent: AppColors.debt,
+        accent: accent,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',
@@ -59,11 +65,13 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(
+              style: TextStyle(color: n.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Tìm khách hàng, SĐT...',
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: TextStyle(color: n.textSecondary),
+                prefixIcon: Icon(Icons.search, color: n.textSecondary),
                 filled: true,
-                fillColor: AppColors.background,
+                fillColor: n.isGame ? n.surface : n.background,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 isDense: true,
               ),
@@ -72,8 +80,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           ),
           Expanded(
             child: customersAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => const Center(child: Text('Không thể tải danh sách khách hàng')),
+              loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
+              error: (error, _) => Center(child: Text('Không thể tải danh sách khách hàng', style: TextStyle(color: n.textPrimary))),
               data: (customers) {
                 final owing = customers.where((c) => c.debtBalance > 0).toList();
                 final totalDebt = customers.fold<num>(0, (s, c) => s + c.debtBalance);
@@ -97,6 +105,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                               label: 'Tất cả',
                               count: customers.length,
                               selected: _filter == _DebtFilter.all,
+                              neutrals: n,
+                              accent: accent,
                               onTap: () => setState(() => _filter = _DebtFilter.all),
                             ),
                             const SizedBox(width: 8),
@@ -104,6 +114,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                               label: 'Đang nợ',
                               count: owing.length,
                               selected: _filter == _DebtFilter.owing,
+                              neutrals: n,
+                              accent: accent,
                               onTap: () => setState(() => _filter = _DebtFilter.owing),
                             ),
                             const SizedBox(width: 8),
@@ -111,6 +123,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                               label: 'Quá hạn',
                               count: 0,
                               selected: _filter == _DebtFilter.overdue,
+                              neutrals: n,
+                              accent: accent,
                               onTap: () => setState(() => _filter = _DebtFilter.overdue),
                             ),
                           ],
@@ -119,30 +133,27 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                       const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-                        ),
+                        decoration: n.cardDecoration(),
                         child: Row(
                           children: [
-                            Expanded(child: _SummaryStat(label: 'Tổng nợ', amount: totalDebt, color: AppColors.expense)),
-                            Container(width: 1, height: 32, color: AppColors.divider),
-                            Expanded(child: _SummaryStat(label: 'Đang nợ', amount: totalDebt, color: AppColors.textPrimary)),
-                            Container(width: 1, height: 32, color: AppColors.divider),
-                            const Expanded(child: _SummaryStat(label: 'Quá hạn', amount: 0, color: AppColors.textSecondary)),
+                            Expanded(child: _SummaryStat(label: 'Tổng nợ', amount: totalDebt, color: AppColors.expense, neutrals: n)),
+                            Container(width: 1, height: 32, color: n.divider),
+                            Expanded(child: _SummaryStat(label: 'Đang nợ', amount: totalDebt, color: n.textPrimary, neutrals: n)),
+                            Container(width: 1, height: 32, color: n.divider),
+                            Expanded(child: _SummaryStat(label: 'Quá hạn', amount: 0, color: n.textSecondary, neutrals: n)),
                           ],
                         ),
                       ),
                       const SizedBox(height: 12),
                       if (filtered.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 32),
-                          child: EmptyStateWidget(message: 'Chưa có khách hàng nào.', icon: Icons.people_outline),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 32),
+                          child: EmptyStateWidget(message: 'Chưa có khách hàng nào.', icon: Icons.people_outline, accent: accent),
                         )
                       else
                         ...filtered.map((c) => _CustomerTile(
                               customer: c,
+                              neutrals: n,
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(builder: (_) => CustomerDetailScreen(customer: c)),
@@ -158,7 +169,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.debt,
+        backgroundColor: accent,
         foregroundColor: Colors.white,
         onPressed: () => showCreateCustomerSheet(context),
         icon: const Icon(Icons.person_add),
@@ -172,9 +183,11 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final int count;
   final bool selected;
+  final ScreenNeutrals neutrals;
+  final Color accent;
   final VoidCallback onTap;
 
-  const _FilterChip({required this.label, required this.count, required this.selected, required this.onTap});
+  const _FilterChip({required this.label, required this.count, required this.selected, required this.neutrals, required this.accent, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -184,13 +197,14 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.debt : AppColors.background,
+          color: selected ? accent : neutrals.surface,
           borderRadius: BorderRadius.circular(20),
+          border: !selected && neutrals.isGame ? Border.all(color: neutrals.divider) : null,
         ),
         child: Text(
           '$label $count',
           style: TextStyle(
-            color: selected ? Colors.white : AppColors.textPrimary,
+            color: selected ? Colors.white : neutrals.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 13,
           ),
@@ -204,8 +218,9 @@ class _SummaryStat extends StatelessWidget {
   final String label;
   final num amount;
   final Color color;
+  final ScreenNeutrals neutrals;
 
-  const _SummaryStat({required this.label, required this.amount, required this.color});
+  const _SummaryStat({required this.label, required this.amount, required this.color, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +233,7 @@ class _SummaryStat extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 11, color: neutrals.textSecondary)),
       ],
     );
   }
@@ -227,27 +242,26 @@ class _SummaryStat extends StatelessWidget {
 class _CustomerTile extends StatelessWidget {
   final Customer customer;
   final VoidCallback onTap;
+  final ScreenNeutrals neutrals;
 
-  const _CustomerTile({required this.customer, required this.onTap});
+  const _CustomerTile({required this.customer, required this.onTap, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
     final owesMoney = customer.debtBalance > 0;
-    return Card(
-      elevation: 0,
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: AppColors.surface,
+      decoration: neutrals.cardDecoration(radius: 12),
       child: ListTile(
         onTap: onTap,
         leading: InitialsAvatar(name: customer.name),
-        title: Text(customer.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(customer.phone ?? ''),
+        title: Text(customer.name, style: TextStyle(fontWeight: FontWeight.w600, color: neutrals.textPrimary)),
+        subtitle: Text(customer.phone ?? '', style: TextStyle(color: neutrals.textSecondary)),
         trailing: Text(
           formatVND(customer.debtBalance),
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: owesMoney ? AppColors.expense : AppColors.textSecondary,
+            color: owesMoney ? AppColors.expense : neutrals.textSecondary,
           ),
         ),
       ),

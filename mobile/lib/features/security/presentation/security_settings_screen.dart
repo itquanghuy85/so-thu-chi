@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../data/app_lock_service.dart';
 import 'app_lock_notifier.dart';
 
@@ -96,44 +100,44 @@ class _SecuritySettingsScreenState extends ConsumerState<SecuritySettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.security, style);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Bảo mật')),
+      backgroundColor: n.tint(accent),
+      appBar: SectionAppBar(title: 'Bảo mật', accent: accent),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: n.isGame ? accent : null))
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-                  ),
+                  decoration: n.cardDecoration(radius: 14),
                   child: Column(
                     children: [
                       ListTile(
-                        leading: CircleAvatar(backgroundColor: AppColors.primary.withValues(alpha: 0.12), child: const Icon(Icons.pin_outlined, color: AppColors.primary)),
-                        title: const Text('Khoá bằng mã PIN', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(_hasPin ? 'Đang bật' : 'Chưa thiết lập'),
+                        leading: CircleAvatar(backgroundColor: accent.withValues(alpha: 0.12), child: Icon(Icons.pin_outlined, color: accent)),
+                        title: Text('Khoá bằng mã PIN', style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
+                        subtitle: Text(_hasPin ? 'Đang bật' : 'Chưa thiết lập', style: TextStyle(color: n.textSecondary)),
                         trailing: Switch(
                           value: _hasPin,
                           onChanged: (value) => value ? _setNewPin() : _removePin(),
                         ),
                       ),
                       if (_hasPin) ...[
-                        const Divider(height: 1),
+                        Divider(height: 1, color: n.divider),
                         ListTile(
                           leading: const SizedBox(width: 40),
-                          title: const Text('Đổi mã PIN'),
-                          trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                          title: Text('Đổi mã PIN', style: TextStyle(color: n.textPrimary)),
+                          trailing: Icon(Icons.chevron_right, color: n.textSecondary),
                           onTap: _changePin,
                         ),
                         if (_biometricAvailable) ...[
-                          const Divider(height: 1),
+                          Divider(height: 1, color: n.divider),
                           ListTile(
                             leading: const SizedBox(width: 40),
-                            title: const Text('Mở khoá bằng vân tay / khuôn mặt'),
+                            title: Text('Mở khoá bằng vân tay / khuôn mặt', style: TextStyle(color: n.textPrimary)),
                             trailing: Switch(value: _biometricEnabled, onChanged: _toggleBiometric),
                           ),
                         ],
@@ -142,11 +146,11 @@ class _SecuritySettingsScreenState extends ConsumerState<SecuritySettingsScreen>
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Text(
                     'Khi bật, ứng dụng sẽ yêu cầu xác thực lại nếu bạn rời ứng dụng quá 5 phút.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 12, color: n.textSecondary),
                   ),
                 ),
               ],

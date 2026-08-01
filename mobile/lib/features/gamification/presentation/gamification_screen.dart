@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/game_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
 import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../data/gamification_repository.dart';
@@ -23,10 +25,13 @@ class GamificationScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(gamificationProfileProvider);
-    final isGameStyle = ref.watch(visualStyleProvider) == AppVisualStyle.gameLeon;
+    final style = ref.watch(visualStyleProvider);
+    final isGameStyle = style == AppVisualStyle.gameLeon;
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dashboard, style);
 
     return Scaffold(
-      backgroundColor: isGameStyle ? GameColors.bgTop : AppColors.background,
+      backgroundColor: n.tint(accent),
       body: profileAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: isGameStyle ? GameColors.cyan : null)),
         error: (error, _) => Center(
@@ -38,7 +43,7 @@ class GamificationScreen extends ConsumerWidget {
                 Text(
                   'Không thể tải dữ liệu thành tích.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: isGameStyle ? GameColors.textPrimary : null),
+                  style: TextStyle(color: n.textPrimary),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton(
@@ -56,17 +61,17 @@ class GamificationScreen extends ConsumerWidget {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              _XpHeader(profile: profile),
+              _XpHeader(profile: profile, accent: accent),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Nhiệm vụ tuần này', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('Nhiệm vụ tuần này', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: n.textPrimary)),
                     const SizedBox(height: 12),
                     _QuestCard(quest: profile.quest),
                     const SizedBox(height: 24),
-                    const Text('Huy hiệu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('Huy hiệu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: n.textPrimary)),
                     const SizedBox(height: 12),
                     _AchievementGrid(achievements: profile.achievements),
                   ],
@@ -82,21 +87,22 @@ class GamificationScreen extends ConsumerWidget {
 
 class _XpHeader extends StatelessWidget {
   final GamificationProfile profile;
+  final Color accent;
 
-  const _XpHeader({required this.profile});
+  const _XpHeader({required this.profile, required this.accent});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: AppColors.headerGradient,
+          colors: AppColors.heroGradient(accent),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
       ),
       child: SafeArea(
         bottom: false,
@@ -189,13 +195,10 @@ class _QuestCardState extends ConsumerState<_QuestCard> {
   Widget build(BuildContext context) {
     final quest = widget.quest;
     final progress = (quest.progress / quest.target).clamp(0, 1).toDouble();
+    final n = neutralsFor(ref.watch(visualStyleProvider));
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
+      decoration: n.cardDecoration(radius: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -207,9 +210,9 @@ class _QuestCardState extends ConsumerState<_QuestCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(quest.description, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(quest.description, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: n.textPrimary)),
                     const SizedBox(height: 2),
-                    Text('Thưởng: +${quest.rewardXp} XP', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    Text('Thưởng: +${quest.rewardXp} XP', style: TextStyle(color: n.textSecondary, fontSize: 12)),
                   ],
                 ),
               ),
@@ -226,7 +229,7 @@ class _QuestCardState extends ConsumerState<_QuestCard> {
             ),
           ),
           const SizedBox(height: 6),
-          Text('${quest.progress}/${quest.target}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text('${quest.progress}/${quest.target}', style: TextStyle(fontSize: 12, color: n.textSecondary)),
           if (quest.claimed) ...[
             const SizedBox(height: 12),
             Row(
@@ -254,17 +257,18 @@ class _QuestCardState extends ConsumerState<_QuestCard> {
   }
 }
 
-class _AchievementGrid extends StatelessWidget {
+class _AchievementGrid extends ConsumerWidget {
   final List<Achievement> achievements;
 
   const _AchievementGrid({required this.achievements});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final n = neutralsFor(ref.watch(visualStyleProvider));
     if (achievements.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Text('Chưa có huy hiệu nào.', style: TextStyle(color: AppColors.textSecondary)),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text('Chưa có huy hiệu nào.', style: TextStyle(color: n.textSecondary)),
       );
     }
     return GridView.builder(
@@ -279,18 +283,18 @@ class _AchievementGrid extends StatelessWidget {
       ),
       itemBuilder: (context, index) {
         final a = achievements[index];
-        final color = a.unlocked ? AppColors.forKey(a.key) : AppColors.textSecondary;
+        final color = a.unlocked ? AppColors.forKey(a.key) : n.textSecondary;
         return Opacity(
           opacity: a.unlocked ? 1 : 0.45,
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: n.surface,
               borderRadius: BorderRadius.circular(14),
               boxShadow: a.unlocked
-                  ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]
+                  ? [BoxShadow(color: n.shadow.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]
                   : null,
-              border: a.unlocked ? null : Border.all(color: AppColors.divider),
+              border: a.unlocked ? null : Border.all(color: n.divider),
             ),
             child: Row(
               children: [
@@ -305,8 +309,8 @@ class _AchievementGrid extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                      Text(a.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                      Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: n.textPrimary)),
+                      Text(a.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: n.textSecondary)),
                     ],
                   ),
                 ),

@@ -19,6 +19,9 @@ class SectionAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: accent,
       foregroundColor: Colors.white,
       elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(22), bottomRight: Radius.circular(22)),
+      ),
       actions: actions,
     );
   }

@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/export/excel_export_service.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/section_app_bar.dart';
 import '../../debt/data/customer_repository.dart';
@@ -41,11 +44,15 @@ class ReportsOverviewScreen extends ConsumerWidget {
       orElse: () => null,
     );
 
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.reports, style);
+
     return Scaffold(
-      backgroundColor: AppColors.tint(AppColors.reports),
+      backgroundColor: n.tint(accent),
       appBar: SectionAppBar(
         title: 'Báo cáo',
-        accent: AppColors.reports,
+        accent: accent,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',
@@ -75,7 +82,7 @@ class ReportsOverviewScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const Text('Tổng quan báo cáo tài chính', style: TextStyle(color: AppColors.textSecondary)),
+            Text('Tổng quan báo cáo tài chính', style: TextStyle(color: n.textSecondary)),
             const SizedBox(height: 12),
             GridView.count(
               crossAxisCount: 2,
@@ -122,31 +129,26 @@ class ReportsOverviewScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-              ),
+              decoration: n.cardDecoration(radius: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tổng quan tháng này', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text('Tổng quan tháng này', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                   const SizedBox(height: 12),
                   monthReportAsync.when(
-                    loading: () => const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    loading: () => Center(
+                      child: Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: CircularProgressIndicator(strokeWidth: 2, color: n.isGame ? accent : null)),
                     ),
-                    error: (error, _) => const Text('Không thể tải báo cáo', style: TextStyle(color: AppColors.textSecondary)),
+                    error: (error, _) => Text('Không thể tải báo cáo', style: TextStyle(color: n.textSecondary)),
                     data: (data) => Column(
                       children: [
-                        _OverviewRow(icon: Icons.arrow_downward, label: 'Tổng thu', amount: data.report.totalIncome, color: AppColors.income),
-                        _OverviewRow(icon: Icons.arrow_upward, label: 'Tổng chi', amount: data.report.totalExpense, color: AppColors.expense),
-                        _OverviewRow(icon: Icons.trending_up, label: 'Lợi nhuận', amount: data.report.netCashflow, color: AppColors.primary),
+                        _OverviewRow(icon: Icons.arrow_downward, label: 'Tổng thu', amount: data.report.totalIncome, color: AppColors.income, neutrals: n),
+                        _OverviewRow(icon: Icons.arrow_upward, label: 'Tổng chi', amount: data.report.totalExpense, color: AppColors.expense, neutrals: n),
+                        _OverviewRow(icon: Icons.trending_up, label: 'Lợi nhuận', amount: data.report.netCashflow, color: AppColors.primary, neutrals: n),
                         if (totalDebt != null)
-                          _OverviewRow(icon: Icons.receipt_long, label: 'Công nợ phải thu', amount: totalDebt, color: AppColors.debt),
+                          _OverviewRow(icon: Icons.receipt_long, label: 'Công nợ phải thu', amount: totalDebt, color: AppColors.debt, neutrals: n),
                         if (totalAssets != null)
-                          _OverviewRow(icon: Icons.account_balance_wallet, label: 'Tổng tài sản', amount: totalAssets, color: AppColors.secondary),
+                          _OverviewRow(icon: Icons.account_balance_wallet, label: 'Tổng tài sản', amount: totalAssets, color: AppColors.secondary, neutrals: n),
                       ],
                     ),
                   ),
@@ -156,22 +158,18 @@ class ReportsOverviewScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-              ),
+              decoration: n.cardDecoration(radius: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Dòng tiền thuần (tháng này)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text('Dòng tiền thuần (tháng này)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 140,
                     child: monthReportAsync.when(
                       loading: () => const SizedBox.shrink(),
                       error: (error, _) => const SizedBox.shrink(),
-                      data: (data) => _MiniNetLineChart(buckets: data.buckets),
+                      data: (data) => _MiniNetLineChart(buckets: data.buckets, neutrals: n, accent: accent),
                     ),
                   ),
                 ],
@@ -243,8 +241,9 @@ class _OverviewRow extends StatelessWidget {
   final String label;
   final num amount;
   final Color color;
+  final ScreenNeutrals neutrals;
 
-  const _OverviewRow({required this.icon, required this.label, required this.amount, required this.color});
+  const _OverviewRow({required this.icon, required this.label, required this.amount, required this.color, required this.neutrals});
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +253,7 @@ class _OverviewRow extends StatelessWidget {
         children: [
           CircleAvatar(radius: 15, backgroundColor: color.withValues(alpha: 0.12), child: Icon(icon, size: 15, color: color)),
           const SizedBox(width: 10),
-          Expanded(child: Text(label)),
+          Expanded(child: Text(label, style: TextStyle(color: neutrals.textPrimary))),
           Text(formatVND(amount), style: TextStyle(fontWeight: FontWeight.bold, color: color)),
         ],
       ),
@@ -264,13 +263,15 @@ class _OverviewRow extends StatelessWidget {
 
 class _MiniNetLineChart extends StatelessWidget {
   final List<ChartBucket> buckets;
+  final ScreenNeutrals neutrals;
+  final Color accent;
 
-  const _MiniNetLineChart({required this.buckets});
+  const _MiniNetLineChart({required this.buckets, required this.neutrals, required this.accent});
 
   @override
   Widget build(BuildContext context) {
     if (buckets.isEmpty) {
-      return const Center(child: Text('Chưa có dữ liệu', style: TextStyle(color: AppColors.textSecondary)));
+      return Center(child: Text('Chưa có dữ liệu', style: TextStyle(color: neutrals.textSecondary)));
     }
     final spots = <FlSpot>[];
     num cumulative = 0;
@@ -288,10 +289,10 @@ class _MiniNetLineChart extends StatelessWidget {
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: AppColors.primary,
+            color: accent,
             barWidth: 3,
             dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(show: true, color: AppColors.primary.withValues(alpha: 0.12)),
+            belowBarData: BarAreaData(show: true, color: accent.withValues(alpha: 0.12)),
           ),
         ],
       ),

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/section_accents.dart';
+import '../../../core/theme/visual_style_provider.dart';
 
 /// Shared branded header for the Login/Register screens (Mục 8) — a
 /// gradient hero with the app mark, name, and a short line of context,
@@ -9,7 +13,7 @@ import '../../../core/constants/app_colors.dart';
 /// and Register using none at all, as before) is what makes the two feel
 /// like one continuous "getting started" flow instead of two unrelated
 /// screens.
-class AuthHeroHeader extends StatelessWidget {
+class AuthHeroHeader extends ConsumerWidget {
   final String title;
   final String subtitle;
   final VoidCallback? onBack;
@@ -17,12 +21,15 @@ class AuthHeroHeader extends StatelessWidget {
   const AuthHeroHeader({super.key, required this.title, required this.subtitle, this.onBack});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = sectionAccent(AppSection.dashboard, style);
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: AppColors.headerGradient,
+          colors: n.isGame ? [accent, Color.lerp(accent, Colors.black, 0.35)!] : AppColors.heroGradient(accent),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -60,7 +67,7 @@ class AuthHeroHeader extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 18, offset: const Offset(0, 8))],
                       ),
-                      child: const Icon(Icons.savings_rounded, size: 36, color: AppColors.primary),
+                      child: Icon(Icons.savings_rounded, size: 36, color: accent),
                     ),
                     const SizedBox(height: 18),
                     Text(
@@ -92,18 +99,19 @@ class AuthHeroHeader extends StatelessWidget {
 /// under [AuthHeroHeader] — the "hero + card" pairing that reads as a
 /// considered layout rather than a form dropped in the middle of a blank
 /// page.
-class AuthFormSheet extends StatelessWidget {
+class AuthFormSheet extends ConsumerWidget {
   final Widget child;
 
   const AuthFormSheet({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final n = neutralsFor(ref.watch(visualStyleProvider));
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: n.surface,
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)),
       ),
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
       child: child,
@@ -115,17 +123,23 @@ class AuthFormSheet extends StatelessWidget {
 /// pills instead of the app's default outlined fields, which reads a shade
 /// more premium for a "first impression" screen without diverging from the
 /// rest of the app's field usage everywhere else.
-InputDecoration authFieldDecoration({required String label, required IconData icon, Widget? suffixIcon}) {
+InputDecoration authFieldDecoration({
+  required String label,
+  required IconData icon,
+  required ScreenNeutrals neutrals,
+  required Color accent,
+  Widget? suffixIcon,
+}) {
   return InputDecoration(
     labelText: label,
     prefixIcon: Icon(icon, size: 21),
     suffixIcon: suffixIcon,
     filled: true,
-    fillColor: AppColors.background,
+    fillColor: neutrals.isGame ? neutrals.surface : neutrals.background,
     contentPadding: const EdgeInsets.symmetric(vertical: 16),
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 1.6)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: accent, width: 1.6)),
     errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.error, width: 1.2)),
     focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.error, width: 1.6)),
   );

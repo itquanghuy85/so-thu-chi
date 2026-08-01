@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import 'onboarding_notifier.dart';
 
 class _OnboardingSlide {
@@ -73,8 +75,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final isLast = _index == _slides.length - 1;
+    final n = neutralsFor(ref.watch(visualStyleProvider));
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: n.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -84,7 +87,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 padding: const EdgeInsets.all(12),
                 child: TextButton(
                   onPressed: _finish,
-                  child: const Text('Bỏ qua', style: TextStyle(color: AppColors.textSecondary)),
+                  child: Text('Bỏ qua', style: TextStyle(color: n.textSecondary)),
                 ),
               ),
             ),
@@ -110,13 +113,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         Text(
                           slide.title,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: n.textPrimary),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           slide.description,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+                          style: TextStyle(fontSize: 14, color: n.textSecondary, height: 1.5),
                         ),
                       ],
                     ),
@@ -134,7 +137,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   width: i == _index ? 22 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: i == _index ? _slides[_index].color : AppColors.divider,
+                    color: i == _index ? _slides[_index].color : n.divider,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

@@ -16,6 +16,8 @@ import { QuestClaim } from '../modules/gamification/entities/quest-claim.entity'
 import { Budget } from '../modules/budgets/entities/budget.entity';
 import { RecurringTransaction } from '../modules/recurring/entities/recurring-transaction.entity';
 import { Shift } from '../modules/shifts/entities/shift.entity';
+import { AuditLog } from '../modules/audit/entities/audit-log.entity';
+import { DailyClosing } from '../modules/daily-closings/entities/daily-closing.entity';
 
 export const entities = [
   User,
@@ -34,6 +36,8 @@ export const entities = [
   Budget,
   RecurringTransaction,
   Shift,
+  AuditLog,
+  DailyClosing,
 ];
 
 export function buildTypeOrmOptions(configService: ConfigService): TypeOrmModuleOptions {

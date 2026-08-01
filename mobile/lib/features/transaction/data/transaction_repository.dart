@@ -226,10 +226,45 @@ class TransactionRepository {
     }
   }
 
-  Future<Transaction> voidTransaction(String id) async {
+  Future<Transaction> voidTransaction(String id, {String? reason}) async {
     try {
-      final response = await _dio.post(ApiEndpoints.voidTransaction(id));
+      final response = await _dio.post(
+        ApiEndpoints.voidTransaction(id),
+        data: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+      );
       return Transaction.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// "Sửa giao dịch": never mutates the original — the backend voids it and
+  /// creates a fresh one with these values (see `TransactionsService.edit`'s
+  /// doc comment). Returns the new transaction.
+  Future<Transaction> editTransaction({
+    required String id,
+    required String type,
+    required num amount,
+    String? categoryId,
+    String? fromVaultId,
+    String? toVaultId,
+    String? customerId,
+    String? note,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dio.patch(ApiEndpoints.editTransaction(id), data: {
+        'type': type,
+        'amount': amount,
+        if (categoryId != null) 'category_id': categoryId,
+        if (fromVaultId != null) 'from_vault_id': fromVaultId,
+        if (toVaultId != null) 'to_vault_id': toVaultId,
+        if (customerId != null) 'customer_id': customerId,
+        if (note != null && note.isNotEmpty) 'note': note,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      });
+      final body = response.data as Map<String, dynamic>;
+      return Transaction.fromJson(body['transaction'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

@@ -15,6 +15,8 @@ import { BudgetsModule } from './modules/budgets/budgets.module';
 import { RecurringModule } from './modules/recurring/recurring.module';
 import { ShiftsModule } from './modules/shifts/shifts.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { DailyClosingsModule } from './modules/daily-closings/daily-closings.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     RecurringModule,
     ShiftsModule,
     NotificationsModule,
+    AuditModule,
+    DailyClosingsModule,
   ],
 })
 export class AppModule {}

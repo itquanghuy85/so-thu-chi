@@ -13,6 +13,8 @@ import { VIRTUAL_VAULT_NAMES } from '../vaults/vaults.constants';
 import { GamificationService } from '../gamification/gamification.service';
 import { BudgetsService } from '../budgets/budgets.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
+import { EditTransactionDto } from './dto/edit-transaction.dto';
 import { formatVndAmount } from '../../common/utils/format.util';
 
 const TRANSACTION_TYPE_LABEL_VI: Record<string, string> = {
@@ -36,6 +38,7 @@ export class TransactionsService {
     private readonly gamificationService: GamificationService,
     private readonly budgetsService: BudgetsService,
     private readonly notificationsService: NotificationsService,
+    private readonly auditService: AuditService,
   ) {}
 
   async create(userId: string, dto: CreateTransactionDto) {
@@ -153,8 +156,16 @@ export class TransactionsService {
     return response;
   }
 
-  async void(transactionId: string, userId: string) {
-    return this.dataSource.transaction(async (manager) => {
+  /// Never a hard delete — flips `status` to `'voided'` and posts mirrored
+  /// reversal entries (see `toTransactionDto`'s doc comment), keeping the
+  /// full audit trail in the ledger itself. `reason` is optional free text,
+  /// recorded only on the audit log entry, not on the transaction row.
+  async void(transactionId: string, userId: string, reason?: string) {
+    // Read outside the mutating transaction — purely for the audit log's
+    // "before" snapshot, so a failure here can never affect the real void.
+    const before = await this.buildResponse(this.dataSource.manager, transactionId).catch(() => null);
+
+    const { dto, workspaceId } = await this.dataSource.transaction(async (manager) => {
       const transaction = await manager.findOne(Transaction, { where: { id: transactionId } });
       if (!transaction) {
         throw new AppException('NOT_FOUND', 'Không tìm thấy giao dịch');
@@ -193,8 +204,52 @@ export class TransactionsService {
       transaction.status = 'voided';
       await manager.save(transaction);
 
-      return this.buildResponse(manager, transactionId);
+      return { dto: await this.buildResponse(manager, transactionId), workspaceId: transaction.workspaceId };
     });
+
+    await this.auditService.record(workspaceId, userId, 'transaction_void', 'transaction', transactionId, before, null, reason);
+
+    return dto;
+  }
+
+  /// "Sửa giao dịch" (Mục — never mutates the original row): voids the
+  /// original transaction (same reversal logic as a manual void, same audit
+  /// trail) and creates a brand-new one with the edited values, so the
+  /// ledger always shows exactly what changed and when rather than
+  /// overwriting history. Both the void and the create get their own
+  /// entries in `transactions`/`transaction_entries` — this is deliberately
+  /// two ledger events, not one.
+  async edit(transactionId: string, userId: string, dto: EditTransactionDto) {
+    const original = await this.dataSource.getRepository(Transaction).findOne({ where: { id: transactionId } });
+    if (!original) {
+      throw new AppException('NOT_FOUND', 'Không tìm thấy giao dịch');
+    }
+    await assertWorkspaceMember(this.dataSource, original.workspaceId, userId);
+    if (original.status !== 'completed') {
+      throw new AppException('CONFLICT', 'Giao dịch đã bị hủy, không thể sửa');
+    }
+
+    await this.void(transactionId, userId, dto.reason ?? 'Sửa giao dịch');
+
+    const created = await this.create(userId, {
+      workspace_id: original.workspaceId,
+      type: dto.type,
+      amount: dto.amount,
+      category_id: dto.category_id,
+      from_vault_id: dto.from_vault_id,
+      to_vault_id: dto.to_vault_id,
+      customer_id: dto.customer_id,
+      note: dto.note,
+      source: 'manual',
+    });
+
+    // A second, more specific audit entry linking old → new (the void()
+    // call above already recorded its own "transaction_void" entry against
+    // the original id) — this one is keyed to the *new* transaction so a
+    // "Lịch sử" lookup on the new row shows what it replaced.
+    await this.auditService.record(original.workspaceId, userId, 'transaction_edit', 'transaction', created.id, null, created, dto.reason);
+
+    return { voided_transaction_id: transactionId, transaction: created };
   }
 
   async list(userId: string, query: ListTransactionsQueryDto) {
@@ -255,7 +310,9 @@ export class TransactionsService {
       entriesByTransaction.set(entry.transactionId, list);
     }
 
-    const data = rows.map((t) => this.toTransactionDto(t, entriesByTransaction.get(t.id) ?? []));
+    const data = await Promise.all(
+      rows.map((t) => this.toTransactionDto(this.dataSource.manager, t, entriesByTransaction.get(t.id) ?? [])),
+    );
     return { data, pagination: { page, total_pages: Math.max(1, Math.ceil(total / limit)) } };
   }
 
@@ -320,7 +377,7 @@ export class TransactionsService {
       where: { transactionId },
       relations: { vault: true },
     });
-    return this.toTransactionDto(transaction, entries);
+    return this.toTransactionDto(manager, transaction, entries);
   }
 
   /**
@@ -336,10 +393,23 @@ export class TransactionsService {
    * void) are used, since `manager.find` returns rows in insertion order
    * for this append-only table.
    */
-  private toTransactionDto(transaction: Transaction, entries: TransactionEntry[]) {
+  private async toTransactionDto(manager: EntityManager, transaction: Transaction, entries: TransactionEntry[]) {
     const relevant = entries.length > 2 ? entries.slice(0, 2) : entries;
     const toEntry = relevant.find((e) => e.side === 'D' && e.vault?.type !== 'virtual');
     const fromEntry = relevant.find((e) => e.side === 'C' && e.vault?.type !== 'virtual');
+
+    // debt_increase/debt_decrease post to the customer's debt vault as a
+    // regular (non-virtual) leg, so it already surfaces as from_vault/
+    // to_vault above — this just also resolves *which customer* that debt
+    // vault belongs to, so an edit form has something to pre-fill.
+    let customer: { id: string; name: string } | null = null;
+    if (transaction.type === 'debt_increase' || transaction.type === 'debt_decrease') {
+      const debtVaultId = (toEntry?.vault?.type === 'debt_customer' ? toEntry.vault.id : fromEntry?.vault?.type === 'debt_customer' ? fromEntry.vault.id : null);
+      if (debtVaultId) {
+        const row = await manager.findOne(Customer, { where: { debtVaultId } });
+        if (row) customer = { id: row.id, name: row.name };
+      }
+    }
 
     return {
       id: transaction.id,
@@ -350,6 +420,7 @@ export class TransactionsService {
       category: transaction.category ? { id: transaction.category.id, name: transaction.category.name } : null,
       from_vault: fromEntry?.vault ? { id: fromEntry.vault.id, name: fromEntry.vault.name, type: fromEntry.vault.type } : null,
       to_vault: toEntry?.vault ? { id: toEntry.vault.id, name: toEntry.vault.name, type: toEntry.vault.type } : null,
+      customer,
       created_at: transaction.createdAt,
       entries: entries.map((e) => ({ id: e.id, vault_id: e.vaultId, side: e.side, amount: e.amount })),
     };

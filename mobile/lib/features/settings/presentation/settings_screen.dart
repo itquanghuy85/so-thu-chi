@@ -10,8 +10,10 @@ import '../../auth/presentation/auth_notifier.dart';
 import '../../../core/notifications/notifications_repository.dart';
 import '../../../core/notifications/push_notification_service.dart';
 import '../../../shared/providers/secure_storage_provider.dart';
+import '../../audit/presentation/audit_log_screen.dart';
 import '../../budget/presentation/budget_management_screen.dart';
 import '../../category/presentation/category_management_screen.dart';
+import '../../daily_closing/presentation/daily_closing_screen.dart';
 import '../../recurring/presentation/recurring_list_screen.dart';
 import '../../security/presentation/security_settings_screen.dart';
 import '../../shift/presentation/shift_screen.dart';
@@ -125,6 +127,15 @@ class SettingsScreen extends ConsumerWidget {
                 showChevron: true,
               ),
               _SettingsTile(
+                icon: Icons.fact_check_outlined,
+                color: Color(0xFF11998E),
+                title: 'Chốt sổ cuối ngày',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const DailyClosingScreen()),
+                ),
+                showChevron: true,
+              ),
+              _SettingsTile(
                 icon: Icons.category_outlined,
                 color: AppColors.debt,
                 title: 'Danh mục thu/chi',
@@ -145,6 +156,16 @@ class SettingsScreen extends ConsumerWidget {
                 title: 'PIN / Vân tay',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const SecuritySettingsScreen()),
+                ),
+                showChevron: true,
+              ),
+              _SettingsTile(
+                icon: Icons.history_rounded,
+                color: AppColors.transfer,
+                title: 'Lịch sử chỉnh sửa',
+                subtitle: 'Nhật ký sửa/xóa giao dịch, chốt sổ',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AuditLogScreen()),
                 ),
                 showChevron: true,
               ),

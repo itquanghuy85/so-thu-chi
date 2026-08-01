@@ -68,9 +68,10 @@ NestJS + TypeORM + PostgreSQL backend for Sổ Thu Chi, a cash-flow management a
 - `DELETE /workspaces/:id/categories/:categoryId` — `CONFLICT` if any transaction references the category
 
 **Transactions**
-- `GET /transactions?workspace_id=&type=&vault_id=&from_date=&to_date=&page=&limit=` — `from_date`/`to_date` are inclusive ISO bounds on `created_at`, added for the mobile Reports screens (period filtering) but usable generally
+- `GET /transactions?workspace_id=&type=&vault_id=&from_date=&to_date=&page=&limit=` — `from_date`/`to_date` are inclusive ISO bounds on `created_at`, added for the mobile Reports screens (period filtering) but usable generally; each row's `customer` field (for `debt_increase`/`debt_decrease`) is resolved by looking up which `Customer` owns the debt vault on that transaction's ledger leg
 - `POST /transactions` — body shape depends on `type` (`income`, `expense`, `transfer`, `debt_increase`, `debt_decrease`); optional `source: 'manual'|'voice'` (default `manual`) grants extra `voice_input` XP; see `src/modules/transactions/dto/create-transaction.dto.ts`
-- `POST /transactions/:id/void`
+- `POST /transactions/:id/void` — `{ reason? }`; flips `status` to `'voided'` and posts mirrored reversal entries, never a hard delete; the optional `reason` is recorded on the audit log entry only
+- `PATCH /transactions/:id` — `{ type, amount, category_id?, from_vault_id?, to_vault_id?, customer_id?, note?, reason? }` ("sửa giao dịch"): never mutates the original row — internally voids it (same as above) and creates a fresh transaction with these values, so the ledger shows exactly what changed. Returns `{ voided_transaction_id, transaction }`. Both the void and the edit are recorded as separate audit log entries
 
 **Customers**
 - `GET /workspaces/:id/customers` — includes `debt_balance` (joined from the customer's debt vault) and `created_at`
@@ -79,6 +80,7 @@ NestJS + TypeORM + PostgreSQL backend for Sổ Thu Chi, a cash-flow management a
 
 **Reports**
 - `GET /reports/cashflow?workspace_id=&period=this_week|this_month|this_year`
+- `GET /reports/daily-summary?workspace_id=&from_date=&to_date=` — per-calendar-day `{ date, income, expense, profit }` rows (Mục — "tính lãi/lỗ hàng ngày"), a real `GROUP BY date_trunc('day', created_at)` — not a scheduled snapshot job; the ledger already is the history, so this is computed on demand every call (max 400-day range). Days with no transactions simply have no row. Powers both the Dashboard's "today" stat and the mobile Reports "Lợi nhuận" screen's chart/table for any period
 
 **Gamification** (Mục 9 — XP, levels, weekly quest, achievements)
 - `GET /gamification/profile?workspace_id=` — `{ xp, level, xp_current_level_floor, xp_next_level, quest, achievements }` for the current user in that workspace
@@ -112,6 +114,14 @@ NestJS + TypeORM + PostgreSQL backend for Sổ Thu Chi, a cash-flow management a
 - `DELETE /notifications/fcm-token` — called at mobile logout
 - No inbox/log endpoint — sends are fire-to-FCM only, triggered best-effort (never blocks or fails the triggering request) from: `TransactionsService.create` (new-transaction ping to other workspace members, and a "budget just crossed its limit" ping the moment an expense pushes spend from at-or-under to over), and `RecurringService.runDue` (a summary ping when occurrences are materialized)
 
+**Daily closings** (Mục — "chốt sổ cuối ngày")
+- `GET /workspaces/:id/daily-closings` — history, newest first
+- `GET /workspaces/:id/daily-closings/today` — `{ closed: boolean, closing: {...} | null }` for the current calendar day
+- `POST /workspaces/:id/daily-closings` — `{ entries: [{ vault_id, actual_balance }], note? }`; once per workspace per calendar day (`CONFLICT` on a second attempt same day). For each entry, calls the existing `VaultsService.reconcile` (the same per-vault "Kiểm kê" action) to apply the actual-vs-book correction, then bundles the results — `book_balance`/`actual_balance`/`variance` per vault plus a `total_variance` — into one historical row. Not a second source of truth for balances, purely the record of the event
+
+**Audit logs** (Mục — "mọi thao tác sửa/xóa đều ghi log")
+- `GET /workspaces/:id/audit-logs?entity_type=&entity_id=&page=&limit=` — append-only; `action` is one of `transaction_edit` | `transaction_void` | `daily_closing`, each row has `before`/`after` JSON snapshots (whatever the acting service already builds as its own DTO — not a generic diffing engine) plus `user_name` and `created_at`. Written by `AuditService.record`, called best-effort (a logging failure never blocks the mutation it's describing) from `TransactionsService.void`/`.edit` and `DailyClosingsService.close`
+
 All error responses use the shape:
 ```json
 { "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [{ "field": "amount", "message": "..." }] } }
@@ -123,13 +133,13 @@ All error responses use the shape:
 - Every workspace gets two internal `type='virtual'` vaults ("Doanh thu" for income, "Chi phí" for expense) used as the counter-party leg of double-entry postings. Their balances are never adjusted — they exist purely so every transaction has a debit and a credit leg in `transaction_entries` for audit history.
 - Vault balances (`current_balance`) are updated directly by `TransactionsService` per the rules in the spec (not derived by summing `transaction_entries`).
 - `POST /transactions/:id/void` reverses the balance effect and appends mirrored reversal entries (side flipped) rather than deleting the original ones, keeping the full audit trail.
+- "Sửa giao dịch" (`PATCH /transactions/:id`) is deliberately two ledger events, not one: void the original, then create a fresh transaction with the edited values. This keeps every transaction row immutable once created and reuses the exact same balance/reversal logic void already has, rather than adding a second code path that mutates amounts/vaults in place.
 
 ## Not implemented yet / next sprint (explicitly out of scope for this pass)
 
 - Cloud/AI voice commands (OCR receipt scanning, forecast AI, cloud NLU fallback) — the mobile app's voice input uses on-device speech recognition + a rule-based parser instead, see `mobile/README.md`
 - A Leon wardrobe/outfit system — the "Game Leon" visual theme itself (mascot, alternate dashboard/nav/achievements skin) and the underlying XP/level/quest/achievement system are both implemented, mobile-side only (no backend changes needed), see `mobile/README.md`
 - Subscriptions / ads
-- Audit log
 - Offline-sync API
 - WebSocket realtime updates
 - Full roles/permissions JSONB system (this pass uses a simple `role` enum column: `owner`|`manager`|`cashier`|`member`)

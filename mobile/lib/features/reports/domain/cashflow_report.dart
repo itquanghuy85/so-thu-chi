@@ -25,6 +25,28 @@ class CashflowReport {
   }
 }
 
+/// One row of `GET /reports/daily-summary` (Mục — "tính lãi/lỗ hàng
+/// ngày"): a real server-side GROUP BY per calendar day, not a client-side
+/// approximation — see `ReportsService.dailySummary`'s doc comment on the
+/// backend for why there's no separate snapshot table behind it.
+class DailySummary {
+  final DateTime date;
+  final num income;
+  final num expense;
+  final num profit;
+
+  const DailySummary({required this.date, required this.income, required this.expense, required this.profit});
+
+  factory DailySummary.fromJson(Map<String, dynamic> json) {
+    return DailySummary(
+      date: DateTime.parse(json['date'] as String),
+      income: (json['income'] as num?) ?? 0,
+      expense: (json['expense'] as num?) ?? 0,
+      profit: (json['profit'] as num?) ?? 0,
+    );
+  }
+}
+
 enum ReportPeriod { week, month, year }
 
 extension ReportPeriodApi on ReportPeriod {

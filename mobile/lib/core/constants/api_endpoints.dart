@@ -42,6 +42,7 @@ class ApiEndpoints {
   // Transactions
   static const String transactions = '/transactions';
   static String voidTransaction(String id) => '/transactions/$id/void';
+  static String editTransaction(String id) => '/transactions/$id';
 
   // Customers
   static String customers(String workspaceId) => '/workspaces/$workspaceId/customers';
@@ -49,6 +50,7 @@ class ApiEndpoints {
 
   // Reports
   static const String cashflowReport = '/reports/cashflow';
+  static const String dailySummaryReport = '/reports/daily-summary';
 
   // Gamification
   static const String gamificationProfile = '/gamification/profile';
@@ -71,4 +73,11 @@ class ApiEndpoints {
 
   // Push notifications
   static const String fcmToken = '/notifications/fcm-token';
+
+  // Daily closings (chốt sổ cuối ngày)
+  static String dailyClosings(String workspaceId) => '/workspaces/$workspaceId/daily-closings';
+  static String dailyClosingToday(String workspaceId) => '/workspaces/$workspaceId/daily-closings/today';
+
+  // Audit logs
+  static String auditLogs(String workspaceId) => '/workspaces/$workspaceId/audit-logs';
 }

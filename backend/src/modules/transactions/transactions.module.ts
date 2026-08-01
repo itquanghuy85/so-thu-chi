@@ -9,9 +9,16 @@ import { TransactionsController } from './transactions.controller';
 import { GamificationModule } from '../gamification/gamification.module';
 import { BudgetsModule } from '../budgets/budgets.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Transaction, TransactionEntry, Vault, Customer]), GamificationModule, BudgetsModule, NotificationsModule],
+  imports: [
+    TypeOrmModule.forFeature([Transaction, TransactionEntry, Vault, Customer]),
+    GamificationModule,
+    BudgetsModule,
+    NotificationsModule,
+    AuditModule,
+  ],
   controllers: [TransactionsController],
   providers: [TransactionsService],
   exports: [TransactionsService],

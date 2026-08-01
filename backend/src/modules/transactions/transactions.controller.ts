@@ -1,6 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { EditTransactionDto } from './dto/edit-transaction.dto';
+import { VoidTransactionDto } from './dto/void-transaction.dto';
 import { ListTransactionsQueryDto } from './dto/list-transactions.query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { WorkspaceMemberGuard } from '../../common/guards/workspace-member.guard';
@@ -27,7 +29,12 @@ export class TransactionsController {
   // `:id` here is the transaction id, not the workspace id — membership is
   // checked inside the service after resolving the transaction's workspace.
   @Post(':id/void')
-  void(@Param('id') id: string, @CurrentUser() user: JwtUserPayload) {
-    return this.transactionsService.void(id, user.id);
+  void(@Param('id') id: string, @CurrentUser() user: JwtUserPayload, @Body() dto: VoidTransactionDto) {
+    return this.transactionsService.void(id, user.id, dto.reason);
+  }
+
+  @Patch(':id')
+  edit(@Param('id') id: string, @CurrentUser() user: JwtUserPayload, @Body() dto: EditTransactionDto) {
+    return this.transactionsService.edit(id, user.id, dto);
   }
 }

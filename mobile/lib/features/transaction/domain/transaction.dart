@@ -55,6 +55,7 @@ class Transaction {
   final TransactionRef? category;
   final TransactionRef? fromVault;
   final TransactionRef? toVault;
+  final TransactionRef? customer;
   final DateTime createdAt;
   final String status;
 
@@ -72,6 +73,7 @@ class Transaction {
     this.category,
     this.fromVault,
     this.toVault,
+    this.customer,
     required this.createdAt,
     required this.status,
     this.pending = false,
@@ -93,6 +95,9 @@ class Transaction {
           : null,
       toVault: json['to_vault'] is Map<String, dynamic>
           ? TransactionRef.fromJson(json['to_vault'] as Map<String, dynamic>)
+          : null,
+      customer: json['customer'] is Map<String, dynamic>
+          ? TransactionRef.fromJson(json['customer'] as Map<String, dynamic>)
           : null,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now(),
       status: json['status'] as String? ?? 'completed',

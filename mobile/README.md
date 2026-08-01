@@ -283,6 +283,33 @@ aren't platform-specific.
   Apple Developer account to actually receive pushes on a real device — not
   available here (see "Building on macOS"); the Android path is fully wired
   and testable.
+- **Sửa/xóa giao dịch** (`edit_transaction_sheet.dart`, transaction detail
+  sheet in `transaction_list_screen.dart`) — "Sửa giao dịch" opens a form
+  pre-filled from the existing transaction; saving calls `PATCH
+  /transactions/:id`, which the backend implements as void-the-original +
+  create-a-new-one (never an in-place mutation — see backend/README.md).
+  "Hủy giao dịch" (the existing void action) now prompts for an optional
+  reason first. Both actions are recorded in the new audit log.
+- **Lịch sử chỉnh sửa** (`features/audit`, Settings → Bảo mật) — a
+  read-only feed of every transaction edit/void and daily closing: who,
+  when, and a plain-language summary derived from the audit entry's
+  before/after snapshot (`GET /workspaces/:id/audit-logs`).
+- **Chốt sổ cuối ngày** (`features/daily_closing`, Settings → Tuỳ chỉnh) —
+  once per calendar day, enter every vault's actual counted balance; the
+  app shows the server-computed variance against the book balance
+  immediately (reuses the same per-vault "Kiểm kê" reconcile action
+  server-side) and keeps a dated history. A second attempt the same day is
+  rejected (`CONFLICT`) rather than silently overwriting the first.
+- **Báo cáo lợi nhuận theo ngày** (`daily_profit_detail_screen.dart`,
+  Reports → Lợi nhuận tile) — period tabs (Tuần/Tháng/Năm/Tùy chọn), a
+  profit-per-day (or per-month, for longer ranges) bar chart, and a full
+  data table. Unlike the Cashflow detail screen's chart (client-side
+  bucketing from a capped 300-row transaction fetch, see below), every
+  number here comes straight from the real server-side `GET
+  /reports/daily-summary` aggregation — no row cap, no approximation. The
+  Dashboard's "Thuần" (net) stat is now sourced from this same endpoint for
+  today, replacing what used to be a client-side estimate from the most
+  recent 20 transactions.
 - **Networking**: `dio` client with an interceptor that attaches the bearer
   token and transparently refreshes on `401` via `POST /auth/refresh`
   (concurrent 401s share one refresh call); forces the user back to Login
@@ -317,10 +344,6 @@ aren't platform-specific.
 
 ## Known simplifications / deviations from the full spec
 
-- **Dashboard "today" income/expense is an approximation**: there is no
-  `GET /transactions?date=today` endpoint, so it's derived by filtering the
-  most recent 20 transactions (assumed newest-first) to those created today
-  (device-local date). Documented in `dashboard_notifier.dart`.
 - **"Bán thiếu" has no due-date picker** — the `debt_increase` endpoint
   only accepts `{ workspace_id, customer_id, amount, note }`, no due date
   field, so it was omitted client-side too. This is also why the Debt
@@ -334,10 +357,13 @@ aren't platform-specific.
   icon — only the seeded ones show in the grid, plus whatever a future
   category-management screen creates (it'll fall back to a generic icon).
 - **Reports data notes** (`features/reports`):
-  - "Lợi nhuận" (profit) on the overview grid is shown as **net cashflow**
-    (thu − chi). The backend has no separate cost-of-goods/giá vốn
-    tracking in this MVP pass, so true profit isn't derivable — this is a
-    labeled approximation, not a bug.
+  - "Lợi nhuận" (profit), both on the Dashboard and the dedicated Lợi
+    nhuận report, means **income − expense** (thu − chi). The backend has
+    no separate cost-of-goods/giá vốn tracking in this MVP pass, so true
+    gross-margin profit isn't derivable — this is a labeled simplification
+    of what "profit" means, not an approximation of the number itself
+    (which is now a real per-day server aggregation — see "Báo cáo lợi
+    nhuận theo ngày" above).
   - The cashflow detail screen's bar chart and category breakdown are
     computed **client-side** from a same-period transaction fetch (up to
     300 rows, using the `from_date`/`to_date` params added to

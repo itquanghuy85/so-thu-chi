@@ -13,6 +13,7 @@ import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction.dart';
 import 'create_transaction_sheet.dart';
+import 'edit_transaction_sheet.dart';
 import 'transaction_display.dart';
 import 'transaction_list_notifier.dart';
 
@@ -369,7 +370,22 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                 ),
               ),
               const SizedBox(height: 16),
-              if (!transaction.isVoided)
+              if (!transaction.isVoided && !transaction.pending) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Sửa giao dịch'),
+                    onPressed: () async {
+                      final updated = await showEditTransactionSheet(sheetContext, transaction);
+                      if (updated != null) {
+                        ref.read(transactionListProvider.notifier).loadFirstPage();
+                        if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -377,9 +393,12 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                     icon: const Icon(Icons.cancel_outlined),
                     label: const Text('Hủy giao dịch'),
                     onPressed: () async {
+                      final reason = await _promptVoidReason(sheetContext);
+                      if (reason == null) return; // user cancelled
                       try {
-                        final updated =
-                            await ref.read(transactionRepositoryProvider).voidTransaction(transaction.id);
+                        final updated = await ref
+                            .read(transactionRepositoryProvider)
+                            .voidTransaction(transaction.id, reason: reason.isEmpty ? null : reason);
                         ref.read(transactionListProvider.notifier).replaceTransaction(updated);
                         if (sheetContext.mounted) Navigator.of(sheetContext).pop();
                       } catch (e) {
@@ -391,11 +410,45 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                     },
                   ),
                 ),
+              ],
             ],
           ),
         ),
       );
     },
+  );
+}
+
+/// Simple confirm dialog with an optional reason field, shown before voiding
+/// a transaction — the reason (if any) is recorded on the audit log entry
+/// only. Returns the entered text (possibly empty) to confirm, or `null` if
+/// the user cancelled.
+Future<String?> _promptVoidReason(BuildContext context) {
+  final controller = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Hủy giao dịch?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Giao dịch sẽ được đánh dấu đã hủy, không bị xóa khỏi lịch sử.'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            decoration: const InputDecoration(labelText: 'Lý do (không bắt buộc)', border: OutlineInputBorder()),
+            maxLines: 2,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Đóng')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+          child: const Text('Hủy giao dịch', style: TextStyle(color: AppColors.error)),
+        ),
+      ],
+    ),
   );
 }
 

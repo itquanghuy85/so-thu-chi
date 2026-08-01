@@ -11,16 +11,17 @@ import '../../vault/data/vault_repository.dart';
 import '../domain/cashflow_report.dart';
 import 'cashflow_detail_notifier.dart';
 import 'cashflow_detail_screen.dart';
+import 'daily_profit_detail_screen.dart';
 
 /// Tab Báo cáo (Mục 12.12) overview grid. Every tile is backed by real
 /// data already available from other endpoints — nothing fabricated:
 /// - Dòng tiền → `GET /reports/cashflow` (drills into [CashflowDetailScreen]).
+/// - Lợi nhuận → `GET /reports/daily-summary`, a real per-day server
+///   aggregation (drills into [DailyProfitDetailScreen]) — "profit" here is
+///   income − expense; there's still no separate cost-of-goods tracking in
+///   this MVP pass, so it isn't gross margin in the accounting sense.
 /// - Tổng tài sản → sum of vault balances (same source as the Dashboard).
 /// - Công nợ → sum of customer debt balances (same source as the Debt tab).
-/// - Lợi nhuận → approximated as net cashflow (income − expense); the
-///   backend has no separate cost-of-goods tracking in this MVP pass, so
-///   true profit (doanh thu − giá vốn − chi phí) isn't derivable yet — see
-///   mobile/README.md.
 class ReportsOverviewScreen extends ConsumerWidget {
   const ReportsOverviewScreen({super.key});
 
@@ -92,11 +93,11 @@ class ReportsOverviewScreen extends ConsumerWidget {
                 ),
                 _ReportTile(
                   title: 'Lợi nhuận',
-                  subtitle: 'Lợi nhuận, biên lợi nhuận, hiệu quả KD',
+                  subtitle: 'Lãi/lỗ theo ngày, tuần, tháng, năm',
                   icon: Icons.show_chart,
                   gradient: AppColors.reportProfit,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CashflowDetailScreen()),
+                    MaterialPageRoute(builder: (_) => const DailyProfitDetailScreen()),
                   ),
                 ),
                 _ReportTile(

@@ -6,6 +6,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
+import '../../../shared/widgets/field_suggestion_chips.dart';
 import '../../debt/data/customer_repository.dart';
 import '../../debt/domain/customer.dart';
 import '../../debt/presentation/create_customer_sheet.dart';
@@ -158,6 +159,7 @@ class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
             amount: parseCurrencyInput(_amountController.text),
             note: _noteController.text.trim(),
           );
+      await FieldHistory.record(workspaceId: workspaceId, fieldKey: 'note_debt_increase', value: _noteController.text);
       ref.invalidate(customerListProvider);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -181,6 +183,7 @@ class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController),
+          FieldSuggestionChips(fieldKey: 'amount_debt_increase', controller: _amountController, accent: AppColors.debt),
           const SizedBox(height: 12),
           TextFormField(
             controller: _noteController,
@@ -193,6 +196,7 @@ class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
             maxLength: 500,
             validator: validateNote,
           ),
+          FieldSuggestionChips(fieldKey: 'note_debt_increase', controller: _noteController, accent: AppColors.debt),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _isSaving ? null : _submit,

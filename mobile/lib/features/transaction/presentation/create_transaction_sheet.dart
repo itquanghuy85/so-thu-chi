@@ -6,6 +6,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
+import '../../../shared/widgets/field_suggestion_chips.dart';
 import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
 import '../../category/domain/category_icons.dart';
@@ -297,6 +298,8 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
             note: _noteController.text.trim(),
             costAmount: costText.isEmpty ? null : parseCurrencyInput(costText),
           );
+      await FieldHistory.record(workspaceId: workspaceId, fieldKey: 'amount_income', value: _amountController.text);
+      await FieldHistory.record(workspaceId: workspaceId, fieldKey: 'note_income', value: _noteController.text);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       final message = e is ApiException ? e.message : 'Không thể lưu giao dịch';
@@ -326,6 +329,7 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController),
+          FieldSuggestionChips(fieldKey: 'amount_income', controller: _amountController, accent: AppColors.income),
           const SizedBox(height: 12),
           AmountTextField(
             controller: _costController,
@@ -349,6 +353,7 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
             maxLength: 500,
             validator: validateNote,
           ),
+          FieldSuggestionChips(fieldKey: 'note_income', controller: _noteController, accent: AppColors.income),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _isSaving ? null : _submit,
@@ -398,6 +403,8 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
             categoryId: _categoryId,
             note: _noteController.text.trim(),
           );
+      await FieldHistory.record(workspaceId: workspaceId, fieldKey: 'amount_expense', value: _amountController.text);
+      await FieldHistory.record(workspaceId: workspaceId, fieldKey: 'note_expense', value: _noteController.text);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       final message = e is ApiException ? e.message : 'Không thể lưu giao dịch';
@@ -427,6 +434,7 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController),
+          FieldSuggestionChips(fieldKey: 'amount_expense', controller: _amountController, accent: AppColors.expense),
           const SizedBox(height: 12),
           TextFormField(
             controller: _noteController,
@@ -440,6 +448,7 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
             maxLength: 500,
             validator: validateNote,
           ),
+          FieldSuggestionChips(fieldKey: 'note_expense', controller: _noteController, accent: AppColors.expense),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _isSaving ? null : _submit,
@@ -494,6 +503,7 @@ class _TransferTransactionFormState extends ConsumerState<TransferTransactionFor
             amount: parseCurrencyInput(_amountController.text),
             note: _noteController.text.trim(),
           );
+      await FieldHistory.record(workspaceId: workspaceId, fieldKey: 'note_transfer', value: _noteController.text);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       final message = e is ApiException ? e.message : 'Không thể lưu giao dịch';
@@ -532,6 +542,7 @@ class _TransferTransactionFormState extends ConsumerState<TransferTransactionFor
             maxLength: 500,
             validator: validateNote,
           ),
+          FieldSuggestionChips(fieldKey: 'note_transfer', controller: _noteController, accent: AppColors.transfer),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _isSaving ? null : _submit,

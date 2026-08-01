@@ -38,7 +38,7 @@ class AppDatabase {
     final path = p.join(dbPath, 'sothuchi_offline.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE response_cache (
@@ -60,8 +60,85 @@ class AppDatabase {
             last_error TEXT
           )
         ''');
+        await db.execute(_fieldHistoryTableSql);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(_fieldHistoryTableSql);
+        }
       },
     );
+  }
+
+  // --- Field-entry history (Mục — "nhập nhanh theo lịch sử") ----------
+  //
+  // Purely local, per-device suggestion memory for form fields (ghi chú,
+  // số tiền, ...) that tend to repeat across sales — e.g. typing "b" for a
+  // note field should surface "Bán rau", "Bán trứng" from past entries.
+  // Deliberately per-workspace + per-field-key, not synced to the server:
+  // this is muscle-memory for data *entry*, not business data itself.
+
+  static const _fieldHistoryTableSql = '''
+    CREATE TABLE field_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workspace_id TEXT NOT NULL,
+      field_key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      use_count INTEGER NOT NULL DEFAULT 1,
+      last_used_at INTEGER NOT NULL,
+      UNIQUE(workspace_id, field_key, value)
+    )
+  ''';
+
+  /// Records that [value] was submitted for [fieldKey] (e.g.
+  /// `'transaction_note'`, `'transaction_amount'`) in [workspaceId] — a
+  /// no-op for blank values. Bumps the existing row's usage count if this
+  /// exact value was seen before, so frequent entries naturally rise to the
+  /// top of [getFieldSuggestions].
+  Future<void> recordFieldValue({
+    required String workspaceId,
+    required String fieldKey,
+    required String value,
+  }) async {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return;
+    final db = await database;
+    await db.rawInsert(
+      '''
+      INSERT INTO field_history (workspace_id, field_key, value, use_count, last_used_at)
+      VALUES (?, ?, ?, 1, ?)
+      ON CONFLICT(workspace_id, field_key, value)
+      DO UPDATE SET use_count = use_count + 1, last_used_at = excluded.last_used_at
+      ''',
+      [workspaceId, fieldKey, trimmed, DateTime.now().millisecondsSinceEpoch],
+    );
+  }
+
+  /// Up to [limit] past values for [fieldKey] in [workspaceId], most
+  /// frequent then most recent first. When [prefix] is non-empty, only
+  /// values starting with it (case-insensitive) are returned — this is what
+  /// powers "type the first letters, see matching past entries".
+  Future<List<String>> getFieldSuggestions({
+    required String workspaceId,
+    required String fieldKey,
+    String prefix = '',
+    int limit = 8,
+  }) async {
+    final db = await database;
+    final trimmedPrefix = prefix.trim();
+    final rows = await db.query(
+      'field_history',
+      columns: ['value'],
+      where: trimmedPrefix.isEmpty
+          ? 'workspace_id = ? AND field_key = ?'
+          : 'workspace_id = ? AND field_key = ? AND LOWER(value) LIKE ?',
+      whereArgs: trimmedPrefix.isEmpty
+          ? [workspaceId, fieldKey]
+          : [workspaceId, fieldKey, '${trimmedPrefix.toLowerCase()}%'],
+      orderBy: 'use_count DESC, last_used_at DESC',
+      limit: limit,
+    );
+    return rows.map((r) => r['value'] as String).toList();
   }
 
   // --- Response cache -------------------------------------------------

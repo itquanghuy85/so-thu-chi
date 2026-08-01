@@ -4,13 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
+import '../../../shared/widgets/field_suggestion_chips.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../../debt/domain/customer.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction.dart';
 import 'create_transaction_sheet.dart' show VaultDropdownField, CategoryDropdownField;
 import 'debt_transaction_tab.dart' show CustomerDropdownField;
+import 'transaction_display.dart' show transactionColor;
 
 /// Opens the "sửa giao dịch" sheet (Mục — never mutates the original; the
 /// backend voids it and creates a fresh one with these values — see
@@ -98,6 +101,12 @@ class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
             costAmount: _type == TransactionType.income && costText.isNotEmpty ? parseCurrencyInput(costText) : null,
             reason: _reasonController.text.trim(),
           );
+      final workspaceId = ref.read(currentWorkspaceIdProvider);
+      await FieldHistory.record(
+        workspaceId: workspaceId,
+        fieldKey: 'note_${transactionTypeToString(_type)}',
+        value: _noteController.text,
+      );
       if (mounted) Navigator.of(context).pop(updated);
     } catch (e) {
       final message = e is ApiException ? e.message : 'Không thể sửa giao dịch';
@@ -178,6 +187,12 @@ class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
                       decoration: InputDecoration(labelText: 'Ghi chú', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                       maxLines: 2,
                       maxLength: 500,
+                    ),
+                    FieldSuggestionChips(
+                      key: ValueKey(_type),
+                      fieldKey: 'note_${transactionTypeToString(_type)}',
+                      controller: _noteController,
+                      accent: transactionColor(_type),
                     ),
                     TextFormField(
                       controller: _reasonController,

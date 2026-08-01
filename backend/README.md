@@ -37,7 +37,45 @@ NestJS + TypeORM + PostgreSQL backend for Sổ Thu Chi, a cash-flow management a
 
 > **Firebase (Google/Apple sign-in):** `POST /auth/social-login` needs a service account key at `backend/firebase-service-account.json` (path configurable via `FIREBASE_SERVICE_ACCOUNT_PATH` in `.env`, git-ignored). It was generated for the `sothuchi-d055a` Firebase project via `gcloud iam service-accounts keys create`, granted the `roles/firebaseauth.admin` role. If this key is ever lost/rotated, generate a new one from Firebase Console → Project settings → Service accounts → Generate new private key, or re-run the `gcloud` command against the `sothuchi-backend` service account.
 
-> **Schema management (MVP simplification):** `synchronize: true` is enabled whenever `NODE_ENV !== 'production'` (see `src/config/typeorm.config.ts`), so TypeORM creates/updates tables directly from the entities on boot. This is convenient for this MVP pass but is **not** safe for production — replace it with real TypeORM migrations (`typeorm migration:generate` / `migration:run`) and set `synchronize: false` before deploying against real data.
+> **Schema management (MVP simplification):** `synchronize: true` by default, including in production (see `src/config/typeorm.config.ts`), so TypeORM creates/updates tables directly from the entities on boot — no hand-written migrations exist yet. Fine for this pass (single-tenant shop app); set `DB_SYNC=false` once real TypeORM migrations (`typeorm migration:generate` / `migration:run`) are added.
+
+## Deploying to the cloud
+
+Running the backend on a personal machine only works while that machine is on **and** on the same network as the phone — not viable for a shop that needs the app to work anywhere, anytime. This section deploys the same backend to a free always-on host instead. Two free services, no credit card needed for either at this scale:
+
+- **[Neon](https://neon.tech)** — managed Postgres, free tier has no time limit (unlike some competitors' 30/90-day free trials).
+- **[Render](https://render.com)** — runs the NestJS app itself, free web service tier (cold-starts after ~15 min idle — the first request after a quiet period takes a few extra seconds, every request after that is normal speed).
+
+Both support signing up with a GitHub account directly — the same account this repo lives on.
+
+**1. Database (Neon)**
+1. Sign up at neon.tech (Continue with GitHub).
+2. Create a new project — any name/region.
+3. On the project dashboard, copy the **connection string** (looks like `postgresql://user:password@ep-xxxx.aws.neon.tech/dbname?sslmode=require`). Keep this tab open, it's needed in step 2 below.
+
+**2. API (Render)**
+1. Sign up at render.com (Continue with GitHub), and grant it access to this repo when asked (it's private).
+2. **New +** → **Web Service** → pick this repo.
+3. Settings:
+   - **Root Directory**: `backend`
+   - **Runtime**: Node
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm run start:prod`
+   - **Instance Type**: Free
+4. Under **Environment**, add:
+   ```
+   NODE_ENV=production
+   DATABASE_URL=<the Neon connection string from step 1>
+   DB_SSL=true
+   JWT_ACCESS_SECRET=<a long random string — see below>
+   JWT_REFRESH_SECRET=<a different long random string>
+   JWT_ACCESS_EXPIRES=15m
+   JWT_REFRESH_EXPIRES=30d
+   FIREBASE_SERVICE_ACCOUNT_JSON=<paste the entire contents of firebase-service-account.json>
+   ```
+   Generate the two JWT secrets locally with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` (run it twice, once per secret) — never reuse the placeholder values from `.env.example`.
+5. Deploy. Render builds and starts the app, then gives a public URL like `https://<service-name>.onrender.com`. First boot also creates every table (`synchronize: true`, see above) — no separate migration step needed.
+6. Point the mobile app at it: build with `flutter run --dart-define=API_BASE_URL=https://<service-name>.onrender.com/v1` (or update the default in `mobile/lib/core/constants/api_endpoints.dart` to make it permanent — see `mobile/README.md`).
 
 ## Implemented endpoints (prefix `/v1`)
 

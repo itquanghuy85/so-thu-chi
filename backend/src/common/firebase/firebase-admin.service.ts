@@ -29,6 +29,17 @@ export class FirebaseAdminService implements OnModuleInit {
       this.app = existing[0];
       return;
     }
+
+    // Cloud hosts (Render, etc.) build straight from the git repo, which
+    // never contains the service account file (git-ignored — it's a
+    // secret). There, the whole JSON key is pasted as a single env var
+    // instead. Local dev keeps using the file, per backend/README.md.
+    const inlineJson = this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT_JSON');
+    if (inlineJson) {
+      this.app = initializeApp({ credential: cert(JSON.parse(inlineJson)) });
+      return;
+    }
+
     const keyPath = this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT_PATH') || 'firebase-service-account.json';
     const resolved = path.isAbsolute(keyPath) ? keyPath : path.join(process.cwd(), keyPath);
     this.app = initializeApp({

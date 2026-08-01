@@ -42,18 +42,35 @@ export const entities = [
 
 export function buildTypeOrmOptions(configService: ConfigService): TypeOrmModuleOptions {
   const nodeEnv = configService.get<string>('NODE_ENV') ?? 'development';
+
+  // Managed Postgres hosts (Neon, Render, Supabase, ...) hand out one
+  // connection string instead of discrete host/port/user/password — prefer
+  // it when set, falling back to the discrete DB_* vars for local dev
+  // (unchanged from before).
+  const databaseUrl = configService.get<string>('DATABASE_URL');
+  const connection: Partial<TypeOrmModuleOptions> = databaseUrl
+    ? { url: databaseUrl }
+    : {
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USER'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+      };
+
   return {
     type: 'postgres',
-    host: configService.get<string>('DB_HOST'),
-    port: configService.get<number>('DB_PORT'),
-    username: configService.get<string>('DB_USER'),
-    password: configService.get<string>('DB_PASSWORD'),
-    database: configService.get<string>('DB_NAME'),
+    ...connection,
+    // Managed Postgres hosts require TLS and typically present a
+    // certificate not in Node's default trust store — DB_SSL=true relaxes
+    // that check rather than needing the provider's CA bundle configured.
+    ssl: configService.get<string>('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
     entities,
-    // MVP: let TypeORM sync the schema from entities instead of hand-written
-    // migrations. Switch this off (and add real migrations) before running
-    // against a production database.
-    synchronize: nodeEnv !== 'production',
+    // MVP: schema is synced straight from the entities instead of
+    // hand-written migrations, intentionally left on even in production for
+    // this pass (single-tenant shop app, not a multi-environment SaaS yet).
+    // Set DB_SYNC=false once real migrations exist.
+    synchronize: configService.get<string>('DB_SYNC') !== 'false',
     logging: nodeEnv === 'development' ? ['error', 'warn'] : false,
   };
 }

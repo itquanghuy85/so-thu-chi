@@ -24,8 +24,25 @@ class AppColors {
   static const Color error = Color(0xFFC62828);
   static const Color divider = Color(0xFFE0E0E0);
 
+  /// Báo cáo tab accent (Mục 12.12) — teal-green, matches the "Tổng tài
+  /// sản" report-tile gradient's first stop.
+  static const Color reports = Color(0xFF11998E);
+
   /// Header/hero gradient (Dashboard top card, Splash background).
   static const List<Color> headerGradient = [Color(0xFF1565C0), Color(0xFF00897B)];
+
+  /// A very light wash of [accent] over white — used as a tab screen's
+  /// `Scaffold.backgroundColor` so the whole canvas subtly reads as
+  /// "belonging" to that tab's color, not just its AppBar (Mục 12: each
+  /// bottom-nav tab has its own accent, matching `MainShellScreen`'s
+  /// `_navItems`).
+  static Color tint(Color accent) => Color.alphaBlend(accent.withValues(alpha: 0.05), Colors.white);
+
+  /// Two-tone gradient built from a tab's accent — used for that tab's
+  /// hero/summary card, so it visually continues the color set by the
+  /// AppBar above it instead of every tab reusing the same blue
+  /// [headerGradient].
+  static List<Color> heroGradient(Color accent) => [accent, Color.lerp(accent, Colors.black, 0.18)!];
 
   /// The 4 report-tile gradients (Mục 12.12 grid: Dòng tiền / Lợi nhuận /
   /// Tổng tài sản / Công nợ).

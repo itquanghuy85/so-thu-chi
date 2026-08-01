@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../domain/cashflow_report.dart';
 import 'daily_profit_notifier.dart';
 
@@ -53,7 +54,8 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
         : ref.watch(dailyProfitProvider(_period ?? ReportPeriod.month));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Báo cáo lợi nhuận')),
+      backgroundColor: AppColors.tint(AppColors.reports),
+      appBar: const SectionAppBar(title: 'Báo cáo lợi nhuận', accent: AppColors.reports),
       body: Column(
         children: [
           Padding(
@@ -70,7 +72,7 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
                         label: Text(p.label),
                         selected: selected,
                         onSelected: (_) => setState(() => _period = p),
-                        selectedColor: AppColors.primary,
+                        selectedColor: AppColors.reports,
                         labelStyle: TextStyle(color: selected ? Colors.white : AppColors.textPrimary, fontSize: 12),
                         backgroundColor: AppColors.surface,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -85,7 +87,7 @@ class _DailyProfitDetailScreenState extends ConsumerState<DailyProfitDetailScree
                         : 'Tùy chọn'),
                     selected: _isCustom,
                     onSelected: (_) => _pickCustomRange(),
-                    selectedColor: AppColors.primary,
+                    selectedColor: AppColors.reports,
                     labelStyle: TextStyle(color: _isCustom ? Colors.white : AppColors.textPrimary, fontSize: 12),
                     backgroundColor: AppColors.surface,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

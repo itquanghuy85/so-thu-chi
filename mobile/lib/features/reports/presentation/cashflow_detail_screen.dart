@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import 'cashflow_detail_notifier.dart';
 import '../domain/cashflow_report.dart';
 
@@ -60,7 +61,8 @@ class _CashflowDetailScreenState extends ConsumerState<CashflowDetailScreen> {
         : ref.watch(cashflowDetailProvider(_period ?? ReportPeriod.month));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Báo cáo dòng tiền')),
+      backgroundColor: AppColors.tint(AppColors.reports),
+      appBar: const SectionAppBar(title: 'Báo cáo dòng tiền', accent: AppColors.reports),
       body: Column(
         children: [
           Padding(
@@ -77,7 +79,7 @@ class _CashflowDetailScreenState extends ConsumerState<CashflowDetailScreen> {
                         label: Text(p.label),
                         selected: selected,
                         onSelected: (_) => setState(() => _period = p),
-                        selectedColor: AppColors.primary,
+                        selectedColor: AppColors.reports,
                         labelStyle: TextStyle(color: selected ? Colors.white : AppColors.textPrimary, fontSize: 12),
                         backgroundColor: AppColors.surface,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -90,7 +92,7 @@ class _CashflowDetailScreenState extends ConsumerState<CashflowDetailScreen> {
                     label: Text(_isCustom ? _chipLabel : 'Tùy chọn'),
                     selected: _isCustom,
                     onSelected: (_) => _pickCustomRange(),
-                    selectedColor: AppColors.primary,
+                    selectedColor: AppColors.reports,
                     labelStyle: TextStyle(color: _isCustom ? Colors.white : AppColors.textPrimary, fontSize: 12),
                     backgroundColor: AppColors.surface,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

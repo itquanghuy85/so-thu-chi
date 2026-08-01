@@ -9,6 +9,7 @@ import '../../../core/offline/sync_queue_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction.dart';
@@ -52,9 +53,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     final notifier = ref.read(transactionListProvider.notifier);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Giao dịch'),
+      backgroundColor: AppColors.tint(AppColors.transfer),
+      appBar: SectionAppBar(
+        title: 'Giao dịch',
+        accent: AppColors.transfer,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',
@@ -94,7 +96,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                           notifier.setFilter(state.filter.copyWith(period: p));
                         }
                       },
-                      selectedColor: AppColors.primary,
+                      selectedColor: AppColors.transfer,
                       labelStyle: TextStyle(color: selected ? Colors.white : AppColors.textPrimary, fontSize: 12),
                       backgroundColor: AppColors.surface,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -165,6 +167,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.transfer,
+        foregroundColor: Colors.white,
         onPressed: () async {
           final created = await showCreateTransactionSheet(context);
           if (created == true) {

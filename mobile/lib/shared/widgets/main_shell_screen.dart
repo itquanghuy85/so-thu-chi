@@ -30,7 +30,7 @@ const _navItems = [
   _NavItem(icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long_rounded, label: 'Giao dịch', classicColor: AppColors.transfer, gameColor: GameColors.gold),
   _NavItem(icon: Icons.account_balance_wallet_outlined, selectedIcon: Icons.account_balance_wallet_rounded, label: 'Túi tiền', classicColor: AppColors.secondary, gameColor: GameColors.lime),
   _NavItem(icon: Icons.people_outline, selectedIcon: Icons.people_alt_rounded, label: 'Công nợ', classicColor: AppColors.debt, gameColor: GameColors.magenta),
-  _NavItem(icon: Icons.pie_chart_outline, selectedIcon: Icons.pie_chart_rounded, label: 'Báo cáo', classicColor: Color(0xFF11998E), gameColor: GameColors.violet),
+  _NavItem(icon: Icons.pie_chart_outline, selectedIcon: Icons.pie_chart_rounded, label: 'Báo cáo', classicColor: AppColors.reports, gameColor: GameColors.violet),
 ];
 
 /// Bottom-nav shell wrapping the 5 main tabs: Dashboard, Transactions,

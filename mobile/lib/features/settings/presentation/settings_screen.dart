@@ -128,7 +128,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               _SettingsTile(
                 icon: Icons.fact_check_outlined,
-                color: Color(0xFF11998E),
+                color: AppColors.reports,
                 title: 'Chốt sổ cuối ngày',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const DailyClosingScreen()),

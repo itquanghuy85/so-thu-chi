@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../transaction/data/transaction_repository.dart';
 import '../../transaction/domain/transaction.dart';
 import '../../transaction/presentation/transaction_list_screen.dart' show TransactionTile, showTransactionDetailSheet;
@@ -27,8 +28,8 @@ class VaultDetailScreen extends ConsumerWidget {
     final color = AppColors.forKey(vault.id);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text(vault.name)),
+      backgroundColor: AppColors.tint(AppColors.secondary),
+      appBar: SectionAppBar(title: vault.name, accent: AppColors.secondary),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(_vaultTransactionsProvider(vault.id)),
         child: ListView(

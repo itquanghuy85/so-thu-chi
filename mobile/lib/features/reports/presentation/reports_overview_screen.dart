@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/export/excel_export_service.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../debt/data/customer_repository.dart';
 import '../../vault/data/vault_repository.dart';
 import '../domain/cashflow_report.dart';
@@ -41,8 +42,10 @@ class ReportsOverviewScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Báo cáo'),
+      backgroundColor: AppColors.tint(AppColors.reports),
+      appBar: SectionAppBar(
+        title: 'Báo cáo',
+        accent: AppColors.reports,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',

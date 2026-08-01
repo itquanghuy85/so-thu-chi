@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../data/vault_repository.dart';
 import '../domain/vault.dart';
 import 'create_vault_sheet.dart';
@@ -29,8 +30,8 @@ class VaultListScreen extends ConsumerWidget {
     final vaultsAsync = ref.watch(vaultListProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Túi tiền')),
+      backgroundColor: AppColors.tint(AppColors.secondary),
+      appBar: const SectionAppBar(title: 'Túi tiền', accent: AppColors.secondary),
       body: vaultsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => const Center(child: Text('Không thể tải danh sách túi tiền')),
@@ -51,7 +52,7 @@ class VaultListScreen extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: AppColors.headerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    gradient: LinearGradient(colors: AppColors.heroGradient(AppColors.secondary), begin: Alignment.topLeft, end: Alignment.bottomRight),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -71,6 +72,8 @@ class VaultListScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.secondary,
+        foregroundColor: Colors.white,
         onPressed: () async {
           final created = await showCreateVaultSheet(context);
           if (created == true) {

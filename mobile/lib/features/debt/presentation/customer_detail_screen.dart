@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/initials_avatar.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../../transaction/presentation/create_transaction_sheet.dart';
 import '../data/customer_repository.dart';
 import '../domain/customer.dart';
@@ -23,7 +24,8 @@ class CustomerDetailScreen extends ConsumerWidget {
     final historyAsync = ref.watch(_debtHistoryProvider(customer.id));
 
     return Scaffold(
-      appBar: AppBar(title: Text(customer.name)),
+      backgroundColor: AppColors.tint(AppColors.debt),
+      appBar: SectionAppBar(title: customer.name, accent: AppColors.debt),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(_debtHistoryProvider(customer.id));

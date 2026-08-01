@@ -6,6 +6,7 @@ import '../../../core/export/excel_export_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/initials_avatar.dart';
+import '../../../shared/widgets/section_app_bar.dart';
 import '../data/customer_repository.dart';
 import '../domain/customer.dart';
 import 'create_customer_sheet.dart';
@@ -34,8 +35,10 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     final customersAsync = ref.watch(customerListProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Công nợ'),
+      backgroundColor: AppColors.tint(AppColors.debt),
+      appBar: SectionAppBar(
+        title: 'Công nợ',
+        accent: AppColors.debt,
         actions: [
           IconButton(
             tooltip: 'Xuất Excel',
@@ -155,6 +158,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.debt,
+        foregroundColor: Colors.white,
         onPressed: () => showCreateCustomerSheet(context),
         icon: const Icon(Icons.person_add),
         label: const Text('Thêm khách'),
@@ -179,7 +184,7 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.background,
+          color: selected ? AppColors.debt : AppColors.background,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

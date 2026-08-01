@@ -48,7 +48,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isGameStyle = ref.watch(visualStyleProvider) == AppVisualStyle.gameLeon;
 
     return Scaffold(
-      backgroundColor: isGameStyle ? GameColors.bgTop : AppColors.background,
+      backgroundColor: isGameStyle ? GameColors.bgTop : AppColors.tint(AppColors.primary),
       body: dashboardAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: isGameStyle ? GameColors.cyan : null)),
         error: (error, _) => Center(

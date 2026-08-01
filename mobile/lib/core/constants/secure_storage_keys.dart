@@ -8,4 +8,6 @@ class SecureStorageKeys {
   static const String pinCode = 'app_lock_pin';
   static const String biometricEnabled = 'app_lock_biometric_enabled';
   static const String visualStyle = 'app_visual_style';
+  static const String onboardingSeen = 'onboarding_seen';
+  static const String fcmToken = 'fcm_token_registered';
 }

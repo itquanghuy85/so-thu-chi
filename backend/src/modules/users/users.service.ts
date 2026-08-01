@@ -19,4 +19,8 @@ export class UsersService {
     const user = this.usersRepository.create(data);
     return this.usersRepository.save(user);
   }
+
+  async setFcmToken(userId: string, token: string | null): Promise<void> {
+    await this.usersRepository.update({ id: userId }, { fcmToken: token });
+  }
 }

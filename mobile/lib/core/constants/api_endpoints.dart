@@ -53,4 +53,22 @@ class ApiEndpoints {
   // Gamification
   static const String gamificationProfile = '/gamification/profile';
   static const String claimQuest = '/gamification/claim-quest';
+
+  // Budgets
+  static String budgets(String workspaceId) => '/workspaces/$workspaceId/budgets';
+  static String budget(String workspaceId, String budgetId) => '/workspaces/$workspaceId/budgets/$budgetId';
+
+  // Recurring transactions
+  static String recurring(String workspaceId) => '/workspaces/$workspaceId/recurring';
+  static String recurringItem(String workspaceId, String id) => '/workspaces/$workspaceId/recurring/$id';
+  static String recurringRunDue(String workspaceId) => '/workspaces/$workspaceId/recurring/run-due';
+
+  // Shifts
+  static String shifts(String workspaceId) => '/workspaces/$workspaceId/shifts';
+  static String shiftCurrent(String workspaceId) => '/workspaces/$workspaceId/shifts/current';
+  static String shiftOpen(String workspaceId) => '/workspaces/$workspaceId/shifts/open';
+  static String shiftClose(String workspaceId, String shiftId) => '/workspaces/$workspaceId/shifts/$shiftId/close';
+
+  // Push notifications
+  static const String fcmToken = '/notifications/fcm-token';
 }

@@ -13,6 +13,9 @@ import { XpEvent } from '../modules/gamification/entities/xp-event.entity';
 import { Achievement } from '../modules/gamification/entities/achievement.entity';
 import { UserAchievement } from '../modules/gamification/entities/user-achievement.entity';
 import { QuestClaim } from '../modules/gamification/entities/quest-claim.entity';
+import { Budget } from '../modules/budgets/entities/budget.entity';
+import { RecurringTransaction } from '../modules/recurring/entities/recurring-transaction.entity';
+import { Shift } from '../modules/shifts/entities/shift.entity';
 
 export const entities = [
   User,
@@ -28,6 +31,9 @@ export const entities = [
   Achievement,
   UserAchievement,
   QuestClaim,
+  Budget,
+  RecurringTransaction,
+  Shift,
 ];
 
 export function buildTypeOrmOptions(configService: ConfigService): TypeOrmModuleOptions {

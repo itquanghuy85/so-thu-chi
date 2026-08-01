@@ -7,8 +7,14 @@ import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/initials_avatar.dart';
 import '../../auth/presentation/auth_notifier.dart';
+import '../../../core/notifications/notifications_repository.dart';
+import '../../../core/notifications/push_notification_service.dart';
+import '../../../shared/providers/secure_storage_provider.dart';
+import '../../budget/presentation/budget_management_screen.dart';
 import '../../category/presentation/category_management_screen.dart';
+import '../../recurring/presentation/recurring_list_screen.dart';
 import '../../security/presentation/security_settings_screen.dart';
+import '../../shift/presentation/shift_screen.dart';
 import '../../workspace/domain/workspace.dart';
 import '../../workspace/presentation/member_management_screen.dart';
 
@@ -92,8 +98,35 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Tuỳ chỉnh',
             children: [
               _SettingsTile(
-                icon: Icons.category_outlined,
+                icon: Icons.pie_chart_outline,
+                color: AppColors.income,
+                title: 'Ngân sách',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BudgetManagementScreen()),
+                ),
+                showChevron: true,
+              ),
+              _SettingsTile(
+                icon: Icons.repeat_rounded,
                 color: AppColors.transfer,
+                title: 'Giao dịch định kỳ',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RecurringListScreen()),
+                ),
+                showChevron: true,
+              ),
+              _SettingsTile(
+                icon: Icons.badge_outlined,
+                color: AppColors.secondary,
+                title: 'Ca làm việc',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ShiftScreen()),
+                ),
+                showChevron: true,
+              ),
+              _SettingsTile(
+                icon: Icons.category_outlined,
+                color: AppColors.debt,
                 title: 'Danh mục thu/chi',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const CategoryManagementScreen()),
@@ -146,6 +179,12 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    // Best-effort — stops this device from receiving this account's pushes
+    // once signed out. Must run before logout clears the access token.
+    await ref.read(pushNotificationServiceProvider).unregister(
+          repository: ref.read(notificationsRepositoryProvider),
+          secureStorage: ref.read(secureStorageProvider),
+        );
     await ref.read(workspaceNotifierProvider.notifier).clearSelection();
     await ref.read(authNotifierProvider.notifier).logout();
     // Router redirect (app.dart) sends the user back to Login.

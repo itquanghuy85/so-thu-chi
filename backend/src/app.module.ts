@@ -11,6 +11,10 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
+import { BudgetsModule } from './modules/budgets/budgets.module';
+import { RecurringModule } from './modules/recurring/recurring.module';
+import { ShiftsModule } from './modules/shifts/shifts.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -29,6 +33,10 @@ import { GamificationModule } from './modules/gamification/gamification.module';
     CustomersModule,
     ReportsModule,
     GamificationModule,
+    BudgetsModule,
+    RecurringModule,
+    ShiftsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

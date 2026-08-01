@@ -40,8 +40,9 @@ export class CreateTransactionDto {
 
   // Optional, defaults to 'manual'. 'voice' grants an extra XP award
   // (Mục 9 "Sử dụng voice: +5 XP") — set by the mobile app's voice-input
-  // confirmation form (Mục 10), never inferred server-side.
+  // confirmation form (Mục 10), never inferred server-side. 'recurring' is
+  // set by RecurringService when materializing a due recurring transaction.
   @IsOptional()
-  @IsIn(['manual', 'voice'], { message: 'source không hợp lệ' })
-  source?: 'manual' | 'voice';
+  @IsIn(['manual', 'voice', 'recurring'], { message: 'source không hợp lệ' })
+  source?: 'manual' | 'voice' | 'recurring';
 }

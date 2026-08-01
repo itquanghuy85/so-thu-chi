@@ -243,6 +243,46 @@ aren't platform-specific.
   app, so the game skin is scoped to the screens actually meant to feel
   playful. Both skins read the exact same providers/data; only presentation
   differs.
+- **Onboarding tour** (`features/onboarding`) — a 5-slide `PageView` shown
+  once on first launch after login (gated in `app.dart`'s router redirect,
+  state persisted in secure storage via `onboardingSeen`), with Skip/Next/
+  "Bắt đầu ngay". Doesn't re-appear after being seen or skipped.
+- **Budgets** (`features/budget`) — Mục — set a monthly spending limit
+  either per-category or for total spend (Settings → Ngân sách). Always
+  implicit "this calendar month" (no period picker/history — see
+  `Budget.entity.ts`'s doc comment on the backend). The Dashboard shows a
+  warning banner (both Classic and Game Leon skins) once any budget crosses
+  80% of its limit, tapping it opens the Budget screen.
+- **Recurring transactions** (`features/recurring`) — Mục — set up a
+  template (type, amount, vault/category/customer, daily/weekly/monthly
+  frequency, start date) from Settings → Giao dịch định kỳ; due occurrences
+  are **materialized lazily**, not via a server cron: the Dashboard calls
+  `POST .../recurring/run-due` as a best-effort step on every load (see
+  `dashboard_notifier.dart`), which creates any transactions whose
+  `next_run_date` has passed (catches up on up to 24 missed occurrences if
+  the app hasn't been opened in a while) using the exact same
+  `TransactionsService.create` a manual entry would.
+- **Shifts / ca làm việc** (`features/shift`) — Mục — "Mở ca" snapshots
+  every real-money vault's balance; the shift stays open until "Kết thúc
+  ca", which snapshots again. Income/expense-during-shift is derived
+  server-side from transactions created in that time window — no separate
+  ledger. History list shows past closed shifts with thu/chi/ròng per shift.
+- **Push notifications** (`core/notifications`, backend
+  `modules/notifications`) — Mục — Firebase Cloud Messaging. The app
+  registers its FCM token (`PATCH /notifications/fcm-token`) once signed in
+  with a workspace selected, and unregisters at logout. The backend sends
+  (best-effort, never blocks the triggering request) on: a new transaction
+  (to other workspace members, not the creator), a budget just crossing its
+  limit (the exact moment spend goes from at-or-under to over, not on every
+  later expense), and recurring transactions materializing. In the
+  foreground, `flutter_local_notifications` shows a heads-up banner
+  (Android/iOS suppress the system tray for a foregrounded app by default);
+  backgrounded/terminated relies on the OS's own system-tray display for the
+  FCM `notification` payload. Tapping a notification deep-links via
+  `go_router` (`/transactions` or `/budgets`). iOS needs an APNs key from an
+  Apple Developer account to actually receive pushes on a real device — not
+  available here (see "Building on macOS"); the Android path is fully wired
+  and testable.
 - **Networking**: `dio` client with an interceptor that attaches the bearer
   token and transparently refreshes on `401` via `POST /auth/refresh`
   (concurrent 401s share one refresh call); forces the user back to Login
@@ -367,10 +407,7 @@ no stub folders were left for them:
   underlying XP/level/quest/achievement system and the "Game Leon" visual
   style itself are both implemented.
 - Ads (AdMob) and in-app purchases / Pro gating.
-- Push notifications (Firebase Messaging / local notifications).
 - OCR (receipt scanning).
-- Budgets, recurring transactions, shifts (ca làm việc).
-- Onboarding tour overlay.
 - i18n / multi-language — all strings are hardcoded Vietnamese, no `.arb`
   files.
 - Bank/e-wallet integrations, notification settings, backup & restore,

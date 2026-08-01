@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/providers/current_workspace_provider.dart';
+import '../../recurring/data/recurring_repository.dart';
 import '../../transaction/data/transaction_repository.dart';
 import '../../transaction/domain/transaction.dart';
 import '../../vault/data/vault_repository.dart';
@@ -39,6 +40,14 @@ final dashboardDataProvider = FutureProvider.autoDispose<DashboardData>((ref) as
   final workspaceId = ref.watch(currentWorkspaceIdProvider);
   final vaultRepo = ref.watch(vaultRepositoryProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
+
+  // There's no server-side scheduler for recurring transactions (Mục
+  // design) — materializing due occurrences on every Dashboard load is the
+  // trigger. Best-effort: if this fails (e.g. offline), the Dashboard still
+  // renders from whatever data is fetchable; the next load retries.
+  try {
+    await ref.read(recurringRepositoryProvider).runDue(workspaceId);
+  } catch (_) {}
 
   final results = await Future.wait([
     vaultRepo.getVaults(workspaceId),

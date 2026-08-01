@@ -1,8 +1,9 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import type { App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getMessaging } from 'firebase-admin/messaging';
 import * as path from 'path';
 import { AppException } from '../exceptions/app.exception';
 
@@ -18,6 +19,7 @@ export interface VerifiedSocialUser {
 @Injectable()
 export class FirebaseAdminService implements OnModuleInit {
   private app!: App;
+  private readonly logger = new Logger(FirebaseAdminService.name);
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -44,6 +46,23 @@ export class FirebaseAdminService implements OnModuleInit {
       };
     } catch {
       throw new AppException('UNAUTHORIZED', 'Token đăng nhập không hợp lệ hoặc đã hết hạn');
+    }
+  }
+
+  /// Best-effort push send — a failure here (invalid/expired token, FCM
+  /// outage) must never bubble up and break the caller's actual mutation
+  /// (transaction creation, recurring run, etc.), so every error is caught
+  /// and just logged.
+  async sendMulticast(tokens: string[], title: string, body: string, data?: Record<string, string>): Promise<void> {
+    if (tokens.length === 0) return;
+    try {
+      await getMessaging(this.app).sendEachForMulticast({
+        tokens,
+        notification: { title, body },
+        data,
+      });
+    } catch (err) {
+      this.logger.warn(`Push notification send failed: ${(err as Error).message}`);
     }
   }
 }

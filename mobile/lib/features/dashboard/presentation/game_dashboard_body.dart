@@ -7,6 +7,8 @@ import '../../../core/offline/sync_queue_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/game/game_widgets.dart';
 import '../../../shared/widgets/leon_mascot.dart';
+import '../../budget/data/budget_repository.dart';
+import '../../budget/presentation/budget_management_screen.dart';
 import '../../gamification/data/gamification_repository.dart';
 import '../../transaction/presentation/create_transaction_sheet.dart';
 import '../../transaction/presentation/transaction_display.dart';
@@ -111,6 +113,7 @@ class GameDashboardBody extends ConsumerWidget {
                 Expanded(child: _GameStat(label: 'Chi hôm nay', amount: data.todayExpense, color: GameColors.coral, icon: Icons.arrow_upward_rounded)),
               ],
             ),
+            const _GameBudgetWarningBanner(),
             const SizedBox(height: 20),
             const GameSectionHeader(title: 'Rương báu (Túi tiền)'),
             const SizedBox(height: 10),
@@ -228,6 +231,61 @@ class _GameStat extends StatelessWidget {
           Text(label, style: const TextStyle(color: GameColors.textSecondary, fontSize: 11)),
         ],
       ),
+    );
+  }
+}
+
+/// Game-skin counterpart to the Classic dashboard's budget banner — same
+/// data source ([budgetListProvider]), styled as a warning quest-log entry.
+class _GameBudgetWarningBanner extends ConsumerWidget {
+  const _GameBudgetWarningBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final budgetsAsync = ref.watch(budgetListProvider);
+    return budgetsAsync.maybeWhen(
+      data: (budgets) {
+        final flagged = budgets.where((b) => b.progress >= 0.8).toList()..sort((a, b) => b.progress.compareTo(a.progress));
+        if (flagged.isEmpty) return const SizedBox.shrink();
+        final worst = flagged.first;
+        final color = worst.overBudget ? GameColors.coral : GameColors.gold;
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BudgetManagementScreen())),
+            child: GameCard(
+              borderColor: color.withValues(alpha: 0.5),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: color, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          worst.overBudget
+                              ? '${worst.categoryName ?? 'Tổng chi tiêu'} đã vượt ngân sách!'
+                              : '${worst.categoryName ?? 'Tổng chi tiêu'} sắp đạt hạn mức',
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: color),
+                        ),
+                        if (flagged.length > 1)
+                          Text(
+                            'Và ${flagged.length - 1} ngân sách khác cần chú ý',
+                            style: const TextStyle(fontSize: 11, color: GameColors.textSecondary),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: color, size: 18),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }

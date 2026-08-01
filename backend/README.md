@@ -88,6 +88,30 @@ NestJS + TypeORM + PostgreSQL backend for Sổ Thu Chi, a cash-flow management a
 - The weekly quest is a single fixed quest ("Tạo 20 giao dịch trong tuần", +100 XP), computed on-demand from a transaction-count query against a Monday-aligned week window — no cron/scheduler
 - Achievements are seeded per-workspace on creation (`founder`, `ten_transactions`, `perfect_reconcile`); `founder` unlocks immediately for the creator
 
+**Budgets** (Mục — monthly spending limits)
+- `GET /workspaces/:id/budgets` — each row includes `spent_this_month`/`remaining`/`over_budget`, computed live from this calendar month's completed expense transactions (no period field — always "this month", see `Budget` entity doc comment)
+- `POST /workspaces/:id/budgets` — `{ category_id?, limit_amount }`; omit `category_id` for a workspace-wide total-spend budget; `CONFLICT` if one already exists for that category (or the global one)
+- `PATCH /workspaces/:id/budgets/:budgetId` — `{ limit_amount }`
+- `DELETE /workspaces/:id/budgets/:budgetId`
+
+**Recurring transactions** (Mục — no server cron; materialized on client trigger)
+- `GET /workspaces/:id/recurring`
+- `POST /workspaces/:id/recurring` — same shape as `POST /transactions` plus `{ frequency: 'daily'|'weekly'|'monthly', start_date }`
+- `PATCH /workspaces/:id/recurring/:id` — `{ active }` (pause/resume)
+- `DELETE /workspaces/:id/recurring/:id`
+- `POST /workspaces/:id/recurring/run-due` — materializes every occurrence whose `next_run_date` has passed (via the same `TransactionsService.create` a manual entry uses), catching up up to 24 missed occurrences per entry; called opportunistically by the mobile Dashboard on load, not a cron job
+
+**Shifts** (Mục — ca làm việc)
+- `GET /workspaces/:id/shifts` — closed + open shifts, each with `income_during_shift`/`expense_during_shift` derived from transactions created in `[opened_at, closed_at)`
+- `GET /workspaces/:id/shifts/current` — the caller's own open shift, or `null`
+- `POST /workspaces/:id/shifts/open` — `{ note? }`; snapshots every non-virtual vault's balance; `CONFLICT` if the caller already has one open
+- `POST /workspaces/:id/shifts/:shiftId/close` — `{ note? }`; snapshots again; only the shift's own opener may close it
+
+**Notifications** (Mục — push, Firebase Cloud Messaging)
+- `PATCH /notifications/fcm-token` — `{ token }`; registers this device's FCM token against the current user (single token per user — a fresh login/refresh overwrites it)
+- `DELETE /notifications/fcm-token` — called at mobile logout
+- No inbox/log endpoint — sends are fire-to-FCM only, triggered best-effort (never blocks or fails the triggering request) from: `TransactionsService.create` (new-transaction ping to other workspace members, and a "budget just crossed its limit" ping the moment an expense pushes spend from at-or-under to over), and `RecurringService.runDue` (a summary ping when occurrences are materialized)
+
 All error responses use the shape:
 ```json
 { "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [{ "field": "amount", "message": "..." }] } }
@@ -103,11 +127,8 @@ All error responses use the shape:
 ## Not implemented yet / next sprint (explicitly out of scope for this pass)
 
 - Cloud/AI voice commands (OCR receipt scanning, forecast AI, cloud NLU fallback) — the mobile app's voice input uses on-device speech recognition + a rule-based parser instead, see `mobile/README.md`
-- The "Game Leon" visual theme (mascot, wardrobe, alternate dashboard skin) — the underlying XP/level/quest/achievement system itself is implemented, see "Gamification" above
-- Notifications / push tokens
-- Budgets, recurring transactions
+- A Leon wardrobe/outfit system — the "Game Leon" visual theme itself (mascot, alternate dashboard/nav/achievements skin) and the underlying XP/level/quest/achievement system are both implemented, mobile-side only (no backend changes needed), see `mobile/README.md`
 - Subscriptions / ads
-- Shift management
 - Audit log
 - Offline-sync API
 - WebSocket realtime updates

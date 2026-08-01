@@ -10,10 +10,26 @@
     <!-- connectivity_plus: detects online/offline transitions for the
          offline-first sync queue (Mục 14 offline mode). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Required on Android 13+ to actually display push notifications
+         (Mục — "Thông báo đẩy"); requested at runtime via
+         FirebaseMessaging.instance.requestPermission(). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Sổ Thu Chi"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Default icon/channel FCM uses to auto-display a system-tray
+             notification while the app is backgrounded/terminated (see
+             PushNotificationService doc comment — this is the only path
+             for those states, flutter_local_notifications only covers the
+             foreground case). Channel id must match the one created in
+             PushNotificationService.initialize. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

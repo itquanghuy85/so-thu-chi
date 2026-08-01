@@ -7,9 +7,11 @@ import { Customer } from '../customers/entities/customer.entity';
 import { TransactionsService } from './transactions.service';
 import { TransactionsController } from './transactions.controller';
 import { GamificationModule } from '../gamification/gamification.module';
+import { BudgetsModule } from '../budgets/budgets.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Transaction, TransactionEntry, Vault, Customer]), GamificationModule],
+  imports: [TypeOrmModule.forFeature([Transaction, TransactionEntry, Vault, Customer]), GamificationModule, BudgetsModule, NotificationsModule],
   controllers: [TransactionsController],
   providers: [TransactionsService],
   exports: [TransactionsService],

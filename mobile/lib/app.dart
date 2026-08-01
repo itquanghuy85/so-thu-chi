@@ -7,9 +7,12 @@ import 'features/auth/presentation/auth_notifier.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/register_screen.dart';
 import 'features/auth/presentation/splash_screen.dart';
+import 'features/budget/presentation/budget_management_screen.dart';
 import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/debt/presentation/customer_list_screen.dart';
 import 'features/gamification/presentation/gamification_screen.dart';
+import 'features/onboarding/presentation/onboarding_notifier.dart';
+import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/reports/presentation/reports_overview_screen.dart';
 import 'features/security/presentation/app_lock_gate.dart';
 import 'features/settings/presentation/settings_screen.dart';
@@ -25,6 +28,7 @@ class _GoRouterRefreshNotifier extends ChangeNotifier {
   _GoRouterRefreshNotifier(Ref ref) {
     ref.listen(authNotifierProvider, (_, _) => notifyListeners());
     ref.listen(workspaceNotifierProvider, (_, _) => notifyListeners());
+    ref.listen(onboardingProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -51,6 +55,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // Authenticated from here on.
+      final onboardingSeen = ref.read(onboardingProvider);
+      if (onboardingSeen == false) {
+        return location == '/onboarding' ? null : '/onboarding';
+      }
       if (workspaceState.selected == null) {
         if (workspaceState.workspaces.isEmpty && !workspaceState.isLoading) {
           // Kick off the load once so a previously-selected workspace
@@ -70,9 +78,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       GoRoute(path: '/workspaces', builder: (context, state) => const WorkspacePickerScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       GoRoute(path: '/gamification', builder: (context, state) => const GamificationScreen()),
+      // Deep-link target for the "budget_over_limit" push notification
+      // (see PushNotificationService._navigate) — not otherwise linked from
+      // the bottom nav, only from Settings > Ngân sách.
+      GoRoute(path: '/budgets', builder: (context, state) => const BudgetManagementScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => MainShellScreen(navigationShell: navigationShell),
         branches: [

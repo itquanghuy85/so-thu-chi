@@ -11,6 +11,17 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { assertWorkspaceMember } from '../../common/utils/workspace-access.util';
 import { VIRTUAL_VAULT_NAMES } from '../vaults/vaults.constants';
 import { GamificationService } from '../gamification/gamification.service';
+import { BudgetsService } from '../budgets/budgets.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { formatVndAmount } from '../../common/utils/format.util';
+
+const TRANSACTION_TYPE_LABEL_VI: Record<string, string> = {
+  income: 'Thu tiền',
+  expense: 'Chi tiền',
+  transfer: 'Chuyển quỹ',
+  debt_increase: 'Bán nợ',
+  debt_decrease: 'Thu nợ',
+};
 
 interface ResolvedLegs {
   toVault?: Vault | null;
@@ -23,6 +34,8 @@ export class TransactionsService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly gamificationService: GamificationService,
+    private readonly budgetsService: BudgetsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(userId: string, dto: CreateTransactionDto) {
@@ -111,6 +124,30 @@ export class TransactionsService {
     }
     if (dto.type === 'debt_decrease') {
       await this.gamificationService.awardXp(dto.workspace_id, userId, 'debt_decrease');
+    }
+
+    // Push notifications (Mục — "Thông báo đẩy") are best-effort, same
+    // after-commit pattern as gamification above: never block or fail the
+    // actual money-moving transaction over a notification hiccup.
+    try {
+      await this.notificationsService.notifyWorkspace(dto.workspace_id, {
+        title: TRANSACTION_TYPE_LABEL_VI[dto.type] ?? 'Giao dịch mới',
+        body: `${formatVndAmount(dto.amount)}đ${dto.note ? ' • ' + dto.note : ''}`,
+        excludeUserId: userId,
+        data: { type: 'transaction_created', workspace_id: dto.workspace_id },
+      });
+      if (dto.type === 'expense') {
+        const crossed = await this.budgetsService.checkJustCrossedLimit(dto.workspace_id, dto.category_id ?? null, dto.amount);
+        for (const budget of crossed) {
+          await this.notificationsService.notifyWorkspace(dto.workspace_id, {
+            title: 'Vượt ngân sách!',
+            body: `${budget.categoryName ?? 'Tổng chi tiêu'} đã chi ${formatVndAmount(budget.spent)}đ / ${formatVndAmount(budget.limitAmount)}đ hạn mức tháng này`,
+            data: { type: 'budget_over_limit', workspace_id: dto.workspace_id },
+          });
+        }
+      }
+    } catch {
+      // best-effort — see comment above
     }
 
     return response;

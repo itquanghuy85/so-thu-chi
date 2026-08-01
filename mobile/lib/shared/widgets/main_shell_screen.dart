@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_colors.dart';
+import '../../core/notifications/push_notification_service.dart';
 import '../../core/offline/sync_queue_service.dart';
 import '../../core/theme/visual_style_provider.dart';
 import 'offline_banner.dart';
@@ -49,6 +50,9 @@ class MainShellScreen extends ConsumerWidget {
     // Side-effect-only watch: keeps the auto-flush-on-reconnect listener
     // alive for the lifetime of the main shell (Mục 14).
     ref.watch(autoFlushOnReconnectProvider);
+    // Registers this device's FCM token once a session + workspace exist
+    // (Mục — "Thông báo đẩy"); MainShellScreen only renders past that point.
+    ref.watch(pushNotificationInitProvider);
     final isGameStyle = ref.watch(visualStyleProvider) == AppVisualStyle.gameLeon;
 
     return Scaffold(

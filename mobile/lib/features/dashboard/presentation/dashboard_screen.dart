@@ -10,6 +10,8 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/initials_avatar.dart';
 import '../../auth/presentation/auth_notifier.dart';
+import '../../budget/data/budget_repository.dart';
+import '../../budget/presentation/budget_management_screen.dart';
 import '../../gamification/data/gamification_repository.dart';
 import '../../transaction/presentation/create_transaction_sheet.dart';
 import '../../transaction/presentation/transaction_list_screen.dart';
@@ -95,6 +97,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _TodayCashflowRow(income: data.todayIncome, expense: data.todayExpense),
+                    const _BudgetWarningBanner(),
                     const SizedBox(height: 20),
                     _VaultCarousel(vaults: data.vaults),
                     const SizedBox(height: 20),
@@ -319,6 +322,68 @@ class _CashflowStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text('$label $sub', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
       ],
+    );
+  }
+}
+
+/// Warns when a category (or the overall) budget is close to or past its
+/// monthly limit — silently disappears on loading/error/empty since it's a
+/// secondary nudge, not core dashboard content (same pattern as [_XpBadge]).
+class _BudgetWarningBanner extends ConsumerWidget {
+  const _BudgetWarningBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final budgetsAsync = ref.watch(budgetListProvider);
+    return budgetsAsync.maybeWhen(
+      data: (budgets) {
+        final flagged = budgets.where((b) => b.progress >= 0.8).toList()..sort((a, b) => b.progress.compareTo(a.progress));
+        if (flagged.isEmpty) return const SizedBox.shrink();
+        final worst = flagged.first;
+        final overCount = flagged.where((b) => b.overBudget).length;
+        final color = worst.overBudget ? AppColors.error : AppColors.transfer;
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BudgetManagementScreen())),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: color, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          worst.overBudget
+                              ? '${worst.categoryName ?? 'Tổng chi tiêu'} đã vượt ngân sách'
+                              : '${worst.categoryName ?? 'Tổng chi tiêu'} sắp đạt hạn mức',
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: color),
+                        ),
+                        if (flagged.length > 1)
+                          Text(
+                            overCount > 0 ? 'Và ${flagged.length - 1} ngân sách khác cần chú ý' : 'Và ${flagged.length - 1} ngân sách khác gần đạt hạn mức',
+                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: color, size: 18),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }

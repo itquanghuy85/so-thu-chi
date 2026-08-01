@@ -7,4 +7,5 @@ class SecureStorageKeys {
   static const String selectedWorkspaceId = 'selected_workspace_id';
   static const String pinCode = 'app_lock_pin';
   static const String biometricEnabled = 'app_lock_biometric_enabled';
+  static const String visualStyle = 'app_visual_style';
 }

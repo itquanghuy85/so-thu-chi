@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/game_colors.dart';
 import '../../../core/offline/sync_queue_service.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/initials_avatar.dart';
@@ -17,6 +19,7 @@ import '../../vault/presentation/vault_detail_screen.dart';
 import '../../vault/presentation/vault_list_screen.dart';
 import '../../voice/presentation/voice_input_sheet.dart';
 import 'dashboard_notifier.dart';
+import 'game_dashboard_body.dart';
 
 String _greeting() {
   final hour = DateTime.now().hour;
@@ -40,18 +43,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final workspace = ref.watch(currentWorkspaceProvider);
     final user = ref.watch(authNotifierProvider).user;
     final dashboardAsync = ref.watch(dashboardDataProvider);
+    final isGameStyle = ref.watch(visualStyleProvider) == AppVisualStyle.gameLeon;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isGameStyle ? GameColors.bgTop : AppColors.background,
       body: dashboardAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: CircularProgressIndicator(color: isGameStyle ? GameColors.cyan : null)),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Không thể tải dữ liệu tổng quan.', textAlign: TextAlign.center),
+                Text(
+                  'Không thể tải dữ liệu tổng quan.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: isGameStyle ? GameColors.textPrimary : null),
+                ),
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () => ref.invalidate(dashboardDataProvider),
@@ -61,7 +69,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
         ),
-        data: (data) => RefreshIndicator(
+        data: (data) => isGameStyle
+            ? GameDashboardBody(
+                data: data,
+                userName: user?.fullName ?? workspace?.name ?? '',
+                balanceHidden: _balanceHidden,
+                onToggleBalance: () => setState(() => _balanceHidden = !_balanceHidden),
+              )
+            : RefreshIndicator(
           onRefresh: () async => ref.invalidate(dashboardDataProvider),
           child: ListView(
             padding: EdgeInsets.zero,

@@ -2,37 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/game_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../data/gamification_repository.dart';
 import '../domain/gamification_profile.dart';
+import 'game_gamification_body.dart';
 
 /// Mục 9 "Gamification hóa": XP/cấp độ, nhiệm vụ tuần, huy hiệu.
 ///
-/// The spec's full "Game Leon" theme (mascot art, wardrobe, alternate
-/// game-styled dashboard skin) needs illustrated character assets that
-/// don't exist in this project — out of scope here (documented in
-/// mobile/README.md). This screen instead surfaces the same underlying
-/// XP/quest/achievement system through the app's existing Classic design
-/// language (gradient header, card+shadow style, AppColors palette).
+/// Renders one of two skins depending on [visualStyleProvider]: the default
+/// Classic look below, or the dark arcade "Game Leon" skin
+/// ([GameGamificationBody], Mục 16.2) built around a hand-painted
+/// [LeonMascot] — see that file's doc comment for why it's procedurally
+/// drawn rather than imported artwork.
 class GamificationScreen extends ConsumerWidget {
   const GamificationScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(gamificationProfileProvider);
+    final isGameStyle = ref.watch(visualStyleProvider) == AppVisualStyle.gameLeon;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isGameStyle ? GameColors.bgTop : AppColors.background,
       body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: CircularProgressIndicator(color: isGameStyle ? GameColors.cyan : null)),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Không thể tải dữ liệu thành tích.', textAlign: TextAlign.center),
+                Text(
+                  'Không thể tải dữ liệu thành tích.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: isGameStyle ? GameColors.textPrimary : null),
+                ),
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () => ref.invalidate(gamificationProfileProvider),
@@ -42,7 +49,9 @@ class GamificationScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (profile) => RefreshIndicator(
+        data: (profile) => isGameStyle
+            ? GameGamificationBody(profile: profile)
+            : RefreshIndicator(
           onRefresh: () async => ref.invalidate(gamificationProfileProvider),
           child: ListView(
             padding: EdgeInsets.zero,

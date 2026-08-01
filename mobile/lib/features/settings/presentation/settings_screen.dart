@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/game_colors.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/initials_avatar.dart';
 import '../../auth/presentation/auth_notifier.dart';
@@ -84,6 +86,8 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
+          const _VisualStyleSection(),
+          const SizedBox(height: 16),
           _SectionCard(
             title: 'Tuỳ chỉnh',
             children: [
@@ -145,6 +149,114 @@ class SettingsScreen extends ConsumerWidget {
     await ref.read(workspaceNotifierProvider.notifier).clearSelection();
     await ref.read(authNotifierProvider.notifier).logout();
     // Router redirect (app.dart) sends the user back to Login.
+  }
+}
+
+/// Picker between the Classic finance-app look and the "Game Leon" arcade
+/// skin (Mục 16.2) — applies to Dashboard, bottom nav, and Thành tích.
+class _VisualStyleSection extends ConsumerWidget {
+  const _VisualStyleSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(visualStyleProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text('Giao diện', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary, fontSize: 12)),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: _StyleOptionCard(
+                title: 'Cổ điển',
+                subtitle: 'Gọn gàng, tập trung số liệu',
+                icon: Icons.receipt_long_rounded,
+                accent: AppColors.primary,
+                selected: current == AppVisualStyle.classic,
+                onTap: () => ref.read(visualStyleProvider.notifier).setStyle(AppVisualStyle.classic),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StyleOptionCard(
+                title: 'Game Leon',
+                subtitle: 'Vui nhộn cùng Leon',
+                icon: Icons.emoji_events_rounded,
+                accent: GameColors.gold,
+                dark: true,
+                selected: current == AppVisualStyle.gameLeon,
+                onTap: () => ref.read(visualStyleProvider.notifier).setStyle(AppVisualStyle.gameLeon),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StyleOptionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accent;
+  final bool selected;
+  final bool dark;
+  final VoidCallback onTap;
+
+  const _StyleOptionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accent,
+    required this.selected,
+    required this.onTap,
+    this.dark = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: dark ? GameColors.surface : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: selected ? accent : (dark ? GameColors.surfaceBorder : AppColors.divider), width: selected ? 2 : 1),
+          boxShadow: selected
+              ? [BoxShadow(color: accent.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 4))]
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: accent.withValues(alpha: dark ? 0.25 : 0.12)),
+                  alignment: Alignment.center,
+                  child: Icon(icon, color: accent, size: 17),
+                ),
+                const Spacer(),
+                if (selected) Icon(Icons.check_circle, color: accent, size: 18),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: dark ? Colors.white : AppColors.textPrimary)),
+            const SizedBox(height: 2),
+            Text(subtitle, style: TextStyle(fontSize: 11, color: dark ? Colors.white70 : AppColors.textSecondary)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

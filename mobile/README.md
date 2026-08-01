@@ -223,8 +223,26 @@ aren't platform-specific.
   onto `GET /gamification/profile` / `POST /gamification/claim-quest`. XP is
   awarded server-side as a best-effort call after each core action commits
   (transaction create, voice input, debt payoff, perfect reconcile, member
-  invited) — see "Gamification notes" below for what's simplified from the
-  spec's full "Game Leon" theme.
+  invited).
+- **"Game Leon" visual style** (`core/theme/visual_style_provider.dart`,
+  `shared/widgets/leon_mascot.dart`, `shared/widgets/game/`) — Mục 16.2: an
+  alternate dark arcade skin, switchable per-device in Settings → Giao diện
+  (persisted in secure storage), built around **Leon**, a lion mascot drawn
+  entirely with `CustomPainter` (no image assets — see `leon_mascot.dart`'s
+  doc comment) with idle breathing/blink animation and mood states (happy/
+  excited/sleepy/proud) that react to XP progress and quest state. Applies
+  to three screens: **Dashboard** (`game_dashboard_body.dart` — Leon +
+  glowing XP bar in the hero, vaults rendered as "treasure chest" cards,
+  quick actions as chunky neon arcade buttons, recent transactions as a
+  "quest log"), the **bottom nav** (dark bar, selected tab glows), and
+  **Thành tích** (`game_gamification_body.dart` — Leon front and center,
+  the weekly quest as a mission card with a pulsing gold claim button,
+  achievements as glowing medals). Every other screen (forms, lists,
+  settings) intentionally stays Classic regardless of this setting — a full
+  reskin of dense data/entry screens would hurt usability for a bookkeeping
+  app, so the game skin is scoped to the screens actually meant to feel
+  playful. Both skins read the exact same providers/data; only presentation
+  differs.
 - **Networking**: `dio` client with an interceptor that attaches the bearer
   token and transparently refreshes on `401` via `POST /auth/refresh`
   (concurrent 401s share one refresh call); forces the user back to Login
@@ -328,17 +346,16 @@ aren't platform-specific.
   original choice — the spec only defines a palette for the "Game Leon"
   theme (Mục 16.2).
 - **Gamification notes**: the backend XP/level/quest/achievement system
-  (Mục 9) is fully implemented and live — see "Gamification" above. What's
-  **not** built is the spec's full "Game Leon" visual theme: an animated
-  Leon mascot, an alternate game-styled dashboard skin (treasure-chest vault
-  cards, ABXY-style buttons), and an outfit/wardrobe system. None of that
-  has illustrated character assets available in this environment, and faking
-  them convincingly is a disproportionate effort for this pass — so the XP/
-  quest/achievement data is instead surfaced through a normal screen using
-  the app's existing Classic design language (gradient header, card+shadow
-  style). The weekly quest is a single fixed quest ("Tạo 20 giao dịch trong
-  tuần") rather than a rotating pool, computed on-demand from a transaction
-  count query (no cron/scheduler infrastructure) rather than pre-generated.
+  (Mục 9) is fully implemented and live — see "Gamification" above, and the
+  "Game Leon" visual style (Dashboard/nav/Thành tích skin, hand-painted Leon
+  mascot) is implemented too — see "Game Leon visual style" above. What's
+  **not** built is a wardrobe/outfit system for Leon (no such data exists
+  server-side to hang it off) and a fully-independent alternate app (every
+  other screen — forms, lists, settings — stays Classic; see that section
+  for why). The weekly quest is a single fixed quest ("Tạo 20 giao dịch
+  trong tuần") rather than a rotating pool, computed on-demand from a
+  transaction count query (no cron/scheduler infrastructure) rather than
+  pre-generated.
 
 ## Explicitly out of scope this pass (next sprint+)
 
@@ -346,9 +363,9 @@ Per the MVP scope for this pass, none of the following are implemented —
 no stub folders were left for them:
 
 - AI assistant / wake word / cloud NLU fallback (see "Voice input notes").
-- The full "Game Leon" visual theme (mascot, wardrobe, alternate dashboard
-  skin) — see "Gamification notes" above. The underlying XP/level/quest/
-  achievement system itself is implemented.
+- A Leon wardrobe/outfit system — see "Gamification notes" above. The
+  underlying XP/level/quest/achievement system and the "Game Leon" visual
+  style itself are both implemented.
 - Ads (AdMob) and in-app purchases / Pro gating.
 - Push notifications (Firebase Messaging / local notifications).
 - OCR (receipt scanning).

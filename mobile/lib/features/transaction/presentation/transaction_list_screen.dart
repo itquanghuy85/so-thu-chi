@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/export/excel_export_service.dart';
 import '../../../core/offline/sync_queue_service.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../data/transaction_repository.dart';
@@ -50,7 +52,16 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Giao dịch')),
+      appBar: AppBar(
+        title: const Text('Giao dịch'),
+        actions: [
+          IconButton(
+            tooltip: 'Xuất Excel',
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () => _exportToExcel(context, ref, state.filter),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -163,6 +174,51 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  /// Fetches every page matching the currently active filter (not just what
+  /// happens to be scrolled into view) and exports it to Excel.
+  ///
+  /// Deliberately avoids a modal `showDialog` + `Navigator.pop()` combo for
+  /// the in-progress indicator: popping a dialog from a stored outer
+  /// `context` after a long `await` (here, spanning the OS share sheet
+  /// launching via `Share.shareXFiles`) can race with unrelated navigation
+  /// events and hit Flutter's `!_debugLocked` assertion — observed crashing
+  /// live. A SnackBar has no such navigation-stack interaction.
+  Future<void> _exportToExcel(BuildContext context, WidgetRef ref, TransactionListFilter filter) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(content: Text('Đang tạo file Excel...'), duration: Duration(seconds: 30)));
+    try {
+      final repo = ref.read(transactionRepositoryProvider);
+      final workspaceId = ref.read(currentWorkspaceIdProvider);
+      final all = <Transaction>[];
+      var page = 1;
+      var totalPages = 1;
+      do {
+        final result = await repo.getTransactions(
+          workspaceId: workspaceId,
+          type: filter.type == null ? null : transactionTypeToString(filter.type!),
+          fromDate: filter.effectiveFromDate,
+          toDate: filter.effectiveToDate,
+          page: page,
+          limit: 100,
+        );
+        all.addAll(result.data);
+        totalPages = result.totalPages;
+        page++;
+      } while (page <= totalPages);
+
+      messenger.hideCurrentSnackBar();
+      if (all.isEmpty) {
+        messenger.showSnackBar(const SnackBar(content: Text('Không có giao dịch để xuất')));
+        return;
+      }
+      await excelExportService.exportTransactions(transactions: all, periodLabel: filter.period.label);
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      final message = e is ApiException ? e.message : 'Không thể xuất file Excel';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 }
 

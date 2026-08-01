@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/export/excel_export_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../debt/data/customer_repository.dart';
 import '../../vault/data/vault_repository.dart';
@@ -39,7 +40,28 @@ class ReportsOverviewScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Báo cáo')),
+      appBar: AppBar(
+        title: const Text('Báo cáo'),
+        actions: [
+          IconButton(
+            tooltip: 'Xuất Excel',
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () async {
+              final report = monthReportAsync.valueOrNull?.report;
+              if (report == null || totalAssets == null || totalDebt == null) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dữ liệu chưa sẵn sàng, vui lòng thử lại')));
+                return;
+              }
+              await excelExportService.exportSummaryReport(
+                report: report,
+                totalAssets: totalAssets,
+                totalDebt: totalDebt,
+                periodLabel: 'Tháng ${DateTime.now().month}-${DateTime.now().year}',
+              );
+            },
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(cashflowDetailProvider(ReportPeriod.month));

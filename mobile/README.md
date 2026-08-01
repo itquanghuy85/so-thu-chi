@@ -203,6 +203,18 @@ aren't platform-specific.
     local writes. Only transaction *creation* is queued; void/reconcile/
     vault-create still require connectivity. Only the first page of each
     cached list is stored (no offline pagination).
+- **Excel export** (`core/export/excel_export_service.dart`) — a download
+  icon in the AppBar on **Giao dịch**, **Công nợ**, and **Báo cáo** generates
+  a real `.xlsx` workbook (via the `excel` package — actual numeric cells,
+  not just formatted text) and opens the OS share sheet (`share_plus`) so it
+  can be saved or handed straight to a bookkeeper (Zalo, email, Drive, ...):
+  - Giao dịch: every transaction matching the screen's current period/type
+    filter (fetches every page, not just what's scrolled into view) —
+    ngày giờ, loại, số tiền (signed), túi/danh mục, ghi chú, trạng thái.
+  - Công nợ: the full customer list — tên, số điện thoại, số dư nợ, ngày tạo.
+  - Báo cáo: this month's summary — tổng thu/chi/lợi nhuận (from the same
+    server-aggregated `GET /reports/cashflow` the overview screen shows),
+    tổng tài sản, công nợ phải thu.
 - **Gamification** (`features/gamification`) — Mục 9: a "Lv.N" badge in the
   Dashboard header (tap to open) links to a dedicated **Thành tích** screen
   showing XP/level progress, the current weekly quest (dynamically computed

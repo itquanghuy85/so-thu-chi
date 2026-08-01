@@ -99,26 +99,45 @@ class _VaultTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => VaultDetailScreen(vault: vault))),
-        leading: CircleAvatar(radius: 20, backgroundColor: color.withValues(alpha: 0.12), child: Icon(vaultTypeIcon(vault.type), color: color)),
-        title: Text(vault.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(vaultTypeLabel(vault.type)),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(formatVND(vault.currentBalance), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            TextButton(
-              style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24), visualDensity: VisualDensity.compact),
-              onPressed: () async {
-                final done = await showReconcileFlow(context, ref);
-                if (done == true) ref.invalidate(vaultListProvider);
-              },
-              child: const Text('Kiểm kê', style: TextStyle(fontSize: 11)),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              CircleAvatar(radius: 20, backgroundColor: color.withValues(alpha: 0.12), child: Icon(vaultTypeIcon(vault.type), color: color)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(vault.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(vaultTypeLabel(vault.type), style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(formatVND(vault.currentBalance), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 2),
+                  TextButton(
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24), visualDensity: VisualDensity.compact),
+                    onPressed: () async {
+                      final done = await showReconcileFlow(context, ref);
+                      if (done == true) ref.invalidate(vaultListProvider);
+                    },
+                    child: const Text('Kiểm kê', style: TextStyle(fontSize: 11)),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

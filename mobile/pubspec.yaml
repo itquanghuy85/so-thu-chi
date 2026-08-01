@@ -66,6 +66,11 @@ dependencies:
   path: ^1.9.0
   connectivity_plus: ^6.1.0
 
+  # Excel export (Giao dịch / Công nợ / Báo cáo)
+  excel: ^4.0.6
+  path_provider: ^2.1.4
+  share_plus: ^10.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

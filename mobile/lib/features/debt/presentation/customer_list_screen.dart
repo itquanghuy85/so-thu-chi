@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/export/excel_export_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/initials_avatar.dart';
@@ -33,7 +34,23 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     final customersAsync = ref.watch(customerListProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Công nợ')),
+      appBar: AppBar(
+        title: const Text('Công nợ'),
+        actions: [
+          IconButton(
+            tooltip: 'Xuất Excel',
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () async {
+              final customers = customersAsync.valueOrNull;
+              if (customers == null || customers.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không có khách hàng để xuất')));
+                return;
+              }
+              await excelExportService.exportCustomers(customers: customers);
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

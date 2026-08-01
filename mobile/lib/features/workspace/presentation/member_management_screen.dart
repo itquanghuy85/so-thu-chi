@@ -23,6 +23,12 @@ String _roleLabel(String role) => switch (role) {
       _ => 'Thành viên',
     };
 
+String _roleDescription(String role) => switch (role) {
+      'manager' => 'Toàn quyền như chủ sở hữu, trừ quản lý thành viên',
+      'cashier' => 'Ghi giao dịch mới bình thường, không thể sửa/xoá giao dịch',
+      _ => 'Ghi giao dịch mới bình thường, không thể sửa/xoá giao dịch',
+    };
+
 /// Quản lý thành viên (Mục 8.5 / 12.13): share the workspace's invite code
 /// (regenerate if needed) and list/remove members. Only the owner sees the
 /// "Xoá" action and the regenerate button — enforced both here and
@@ -103,21 +109,33 @@ class MemberManagementScreen extends ConsumerWidget {
                 const SizedBox(height: 20),
                 Text('${members.length} thành viên', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                 const SizedBox(height: 8),
-                ...members.map((m) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: n.cardDecoration(radius: 12),
-                      child: ListTile(
-                        leading: InitialsAvatar(name: m.fullName.isEmpty ? m.email : m.fullName),
-                        title: Text(m.fullName.isEmpty ? m.email : m.fullName, style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
-                        subtitle: Text('${m.email}${m.email.isNotEmpty ? ' • ' : ''}${_roleLabel(m.role)}', style: TextStyle(color: n.textSecondary)),
-                        trailing: isOwner && m.userId != currentUserId
-                            ? IconButton(
-                                icon: const Icon(Icons.person_remove_outlined, color: AppColors.error),
-                                onPressed: () => _confirmRemove(context, ref, m),
-                              )
-                            : null,
-                      ),
-                    )),
+                if (isOwner)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Bấm vào một thành viên để đổi vai trò (phân quyền)',
+                      style: TextStyle(fontSize: 11.5, color: n.textSecondary, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ...members.map((m) {
+                  final canManage = isOwner && m.userId != currentUserId;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: n.cardDecoration(radius: 12),
+                    child: ListTile(
+                      onTap: canManage ? () => _showRolePicker(context, ref, m) : null,
+                      leading: InitialsAvatar(name: m.fullName.isEmpty ? m.email : m.fullName),
+                      title: Text(m.fullName.isEmpty ? m.email : m.fullName, style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
+                      subtitle: Text('${m.email}${m.email.isNotEmpty ? ' • ' : ''}${_roleLabel(m.role)}', style: TextStyle(color: n.textSecondary)),
+                      trailing: canManage
+                          ? IconButton(
+                              icon: const Icon(Icons.person_remove_outlined, color: AppColors.error),
+                              onPressed: () => _confirmRemove(context, ref, m),
+                            )
+                          : null,
+                    ),
+                  );
+                }),
               ],
             ),
           );
@@ -132,6 +150,48 @@ class MemberManagementScreen extends ConsumerWidget {
       ref.invalidate(_workspaceDetailProvider(workspaceId));
     } catch (e) {
       final message = e is ApiException ? e.message : 'Không thể tạo mã mời mới';
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _showRolePicker(BuildContext context, WidgetRef ref, WorkspaceMember member) async {
+    const roles = ['manager', 'cashier', 'member'];
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Text(
+                'Vai trò của ${member.fullName.isEmpty ? member.email : member.fullName}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            for (final role in roles)
+              RadioListTile<String>(
+                value: role,
+                // ignore: deprecated_member_use
+                groupValue: member.role,
+                title: Text(_roleLabel(role)),
+                subtitle: Text(_roleDescription(role), style: const TextStyle(fontSize: 12)),
+                onChanged: (v) => Navigator.of(sheetContext).pop(v),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || selected == member.role || !context.mounted) return;
+    try {
+      await ref.read(workspaceRepositoryProvider).updateMemberRole(workspaceId: workspaceId, userId: member.userId, role: selected);
+      ref.invalidate(_workspaceDetailProvider(workspaceId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đã đổi vai trò thành ${_roleLabel(selected)}')));
+      }
+    } catch (e) {
+      final message = e is ApiException ? e.message : 'Không thể đổi vai trò';
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }

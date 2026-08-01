@@ -25,3 +25,14 @@ final currentWorkspaceIdProvider = Provider<String>((ref) {
   }
   return workspace.id;
 });
+
+/// Mục — "cài đặt phân quyền từng người": mirrors the server-side check in
+/// `TransactionsService.void()` (owner/manager only) so cashier/member
+/// accounts don't see a "Sửa"/"Xoá" action that would just come back as a
+/// 403 — purely a UI nicety, the backend is still the actual enforcement.
+/// Defaults to `true` if `role` is ever missing so this never blocks a
+/// legitimate owner over a parsing gap.
+final canEditTransactionsProvider = Provider<bool>((ref) {
+  final role = ref.watch(currentWorkspaceProvider)?.role;
+  return role == null || role == 'owner' || role == 'manager';
+});

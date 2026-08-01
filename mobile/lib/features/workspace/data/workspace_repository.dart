@@ -83,6 +83,17 @@ class WorkspaceRepository {
       throw ApiException.fromDioException(e);
     }
   }
+
+  /// Owner-only (Mục — "cài đặt phân quyền từng người"): `role` must be one
+  /// of `'manager'`, `'cashier'`, `'member'` — the owner's own role can't
+  /// be changed this way (see `WorkspacesService.updateMemberRole`).
+  Future<void> updateMemberRole({required String workspaceId, required String userId, required String role}) async {
+    try {
+      await _dio.patch(ApiEndpoints.updateMemberRole(workspaceId, userId), data: {'role': role});
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
 }
 
 final workspaceRepositoryProvider = Provider<WorkspaceRepository>((ref) {

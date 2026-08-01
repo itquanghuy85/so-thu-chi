@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { WorkspacesService } from './workspaces.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { JoinWorkspaceDto } from './dto/join-workspace.dto';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { WorkspaceMemberGuard } from '../../common/guards/workspace-member.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -46,5 +47,16 @@ export class WorkspacesController {
   @Delete(':id/members/:userId')
   removeMember(@Param('id') id: string, @Param('userId') userId: string, @CurrentUser() user: JwtUserPayload) {
     return this.workspacesService.removeMember(id, userId, user.id);
+  }
+
+  @UseGuards(WorkspaceMemberGuard)
+  @Patch(':id/members/:userId/role')
+  updateMemberRole(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @CurrentUser() user: JwtUserPayload,
+    @Body() dto: UpdateMemberRoleDto,
+  ) {
+    return this.workspacesService.updateMemberRole(id, userId, user.id, dto.role);
   }
 }

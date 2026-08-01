@@ -41,7 +41,7 @@ export class TransactionsService {
     private readonly auditService: AuditService,
   ) {}
 
-  async create(userId: string, dto: CreateTransactionDto) {
+  async create(userId: string, dto: CreateTransactionDto, notify = true) {
     await assertWorkspaceMember(this.dataSource, dto.workspace_id, userId);
 
     const response = await this.dataSource.transaction(async (manager) => {
@@ -132,26 +132,32 @@ export class TransactionsService {
 
     // Push notifications (Mục — "Thông báo đẩy") are best-effort, same
     // after-commit pattern as gamification above: never block or fail the
-    // actual money-moving transaction over a notification hiccup.
-    try {
-      await this.notificationsService.notifyWorkspace(dto.workspace_id, {
-        title: TRANSACTION_TYPE_LABEL_VI[dto.type] ?? 'Giao dịch mới',
-        body: `${formatVndAmount(dto.amount)}đ${dto.note ? ' • ' + dto.note : ''}`,
-        excludeUserId: userId,
-        data: { type: 'transaction_created', workspace_id: dto.workspace_id },
-      });
-      if (dto.type === 'expense') {
-        const crossed = await this.budgetsService.checkJustCrossedLimit(dto.workspace_id, dto.category_id ?? null, dto.amount);
-        for (const budget of crossed) {
-          await this.notificationsService.notifyWorkspace(dto.workspace_id, {
-            title: 'Vượt ngân sách!',
-            body: `${budget.categoryName ?? 'Tổng chi tiêu'} đã chi ${formatVndAmount(budget.spent)}đ / ${formatVndAmount(budget.limitAmount)}đ hạn mức tháng này`,
-            data: { type: 'budget_over_limit', workspace_id: dto.workspace_id },
-          });
+    // actual money-moving transaction over a notification hiccup. Skipped
+    // when called from `edit()` (`notify = false`) — that path sends its
+    // own single "Đã sửa giao dịch" notification instead of this plus a
+    // separate void notification, which would read as two unrelated events
+    // for what the user experiences as one action.
+    if (notify) {
+      try {
+        await this.notificationsService.notifyWorkspace(dto.workspace_id, {
+          title: TRANSACTION_TYPE_LABEL_VI[dto.type] ?? 'Giao dịch mới',
+          body: `${formatVndAmount(dto.amount)}đ${dto.note ? ' • ' + dto.note : ''}`,
+          excludeUserId: userId,
+          data: { type: 'transaction_created', workspace_id: dto.workspace_id },
+        });
+        if (dto.type === 'expense') {
+          const crossed = await this.budgetsService.checkJustCrossedLimit(dto.workspace_id, dto.category_id ?? null, dto.amount);
+          for (const budget of crossed) {
+            await this.notificationsService.notifyWorkspace(dto.workspace_id, {
+              title: 'Vượt ngân sách!',
+              body: `${budget.categoryName ?? 'Tổng chi tiêu'} đã chi ${formatVndAmount(budget.spent)}đ / ${formatVndAmount(budget.limitAmount)}đ hạn mức tháng này`,
+              data: { type: 'budget_over_limit', workspace_id: dto.workspace_id },
+            });
+          }
         }
+      } catch {
+        // best-effort — see comment above
       }
-    } catch {
-      // best-effort — see comment above
     }
 
     return response;
@@ -161,7 +167,7 @@ export class TransactionsService {
   /// reversal entries (see `toTransactionDto`'s doc comment), keeping the
   /// full audit trail in the ledger itself. `reason` is optional free text,
   /// recorded only on the audit log entry, not on the transaction row.
-  async void(transactionId: string, userId: string, reason?: string) {
+  async void(transactionId: string, userId: string, reason?: string, notify = true) {
     // Read outside the mutating transaction — purely for the audit log's
     // "before" snapshot, so a failure here can never affect the real void.
     const before = await this.buildResponse(this.dataSource.manager, transactionId).catch(() => null);
@@ -171,7 +177,17 @@ export class TransactionsService {
       if (!transaction) {
         throw new AppException('NOT_FOUND', 'Không tìm thấy giao dịch');
       }
-      await assertWorkspaceMember(this.dataSource, transaction.workspaceId, userId);
+      const role = await assertWorkspaceMember(this.dataSource, transaction.workspaceId, userId);
+      // Mục — "cài đặt phân quyền từng người": voiding/editing can rewrite
+      // what a shift actually looked like, so it's restricted to
+      // owner/manager. Deliberately NOT restricting transaction *creation*
+      // itself — every member (including the pre-existing default
+      // `'member'` role everyone already had before this permission system
+      // existed) keeps being able to record sales/expenses exactly as
+      // before.
+      if (role === 'cashier' || role === 'member') {
+        throw new AppException('FORBIDDEN', 'Chỉ chủ sở hữu hoặc quản lý mới có thể sửa/xoá giao dịch');
+      }
       if (transaction.status !== 'completed') {
         throw new AppException('CONFLICT', 'Giao dịch đã bị hủy trước đó');
       }
@@ -210,6 +226,21 @@ export class TransactionsService {
 
     await this.auditService.record(workspaceId, userId, 'transaction_void', 'transaction', transactionId, before, null, reason);
 
+    // Best-effort, same pattern as create()'s — see its doc comment for why
+    // `notify` is skipped when this is called from within `edit()`.
+    if (notify) {
+      try {
+        await this.notificationsService.notifyWorkspace(workspaceId, {
+          title: 'Đã hủy giao dịch',
+          body: `${formatVndAmount(dto.amount)}đ${before?.note ? ' • ' + before.note : ''}${reason ? ' • Lý do: ' + reason : ''}`,
+          excludeUserId: userId,
+          data: { type: 'transaction_voided', workspace_id: workspaceId },
+        });
+      } catch {
+        // best-effort — see comment above
+      }
+    }
+
     return dto;
   }
 
@@ -230,26 +261,43 @@ export class TransactionsService {
       throw new AppException('CONFLICT', 'Giao dịch đã bị hủy, không thể sửa');
     }
 
-    await this.void(transactionId, userId, dto.reason ?? 'Sửa giao dịch');
+    await this.void(transactionId, userId, dto.reason ?? 'Sửa giao dịch', false);
 
-    const created = await this.create(userId, {
-      workspace_id: original.workspaceId,
-      type: dto.type,
-      amount: dto.amount,
-      category_id: dto.category_id,
-      from_vault_id: dto.from_vault_id,
-      to_vault_id: dto.to_vault_id,
-      customer_id: dto.customer_id,
-      note: dto.note,
-      cost_amount: dto.cost_amount,
-      source: 'manual',
-    });
+    const created = await this.create(
+      userId,
+      {
+        workspace_id: original.workspaceId,
+        type: dto.type,
+        amount: dto.amount,
+        category_id: dto.category_id,
+        from_vault_id: dto.from_vault_id,
+        to_vault_id: dto.to_vault_id,
+        customer_id: dto.customer_id,
+        note: dto.note,
+        cost_amount: dto.cost_amount,
+        source: 'manual',
+      },
+      false,
+    );
 
     // A second, more specific audit entry linking old → new (the void()
     // call above already recorded its own "transaction_void" entry against
     // the original id) — this one is keyed to the *new* transaction so a
     // "Lịch sử" lookup on the new row shows what it replaced.
     await this.auditService.record(original.workspaceId, userId, 'transaction_edit', 'transaction', created.id, null, created, dto.reason);
+
+    // One notification for the whole edit — see create()/void()'s doc
+    // comments for why their own notifications are suppressed here.
+    try {
+      await this.notificationsService.notifyWorkspace(original.workspaceId, {
+        title: 'Đã sửa giao dịch',
+        body: `${formatVndAmount(created.amount)}đ${created.note ? ' • ' + created.note : ''}`,
+        excludeUserId: userId,
+        data: { type: 'transaction_edited', workspace_id: original.workspaceId },
+      });
+    } catch {
+      // best-effort — see create()'s doc comment
+    }
 
     return { voided_transaction_id: transactionId, transaction: created };
   }

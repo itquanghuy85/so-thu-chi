@@ -36,6 +36,7 @@ class ApiEndpoints {
   static const String joinWorkspace = '/workspaces/join';
   static String regenerateInviteCode(String id) => '/workspaces/$id/invite-code';
   static String removeMember(String workspaceId, String userId) => '/workspaces/$workspaceId/members/$userId';
+  static String updateMemberRole(String workspaceId, String userId) => '/workspaces/$workspaceId/members/$userId/role';
 
   // Vaults
   static String vaults(String workspaceId) => '/workspaces/$workspaceId/vaults';

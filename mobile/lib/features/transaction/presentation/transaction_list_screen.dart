@@ -390,7 +390,7 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                 ),
               ),
               const SizedBox(height: 16),
-              if (!transaction.isVoided && !transaction.pending) ...[
+              if (!transaction.isVoided && !transaction.pending && ref.watch(canEditTransactionsProvider)) ...[
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(

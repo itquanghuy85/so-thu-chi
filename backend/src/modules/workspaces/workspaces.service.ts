@@ -199,4 +199,33 @@ export class WorkspacesService {
     await this.membersRepository.delete({ workspaceId, userId: targetUserId });
     return { success: true };
   }
+
+  /// Owner-only: assigns a member's role (Mục — "cài đặt phân quyền từng
+  /// người"). The owner's own role can't be reassigned this way — there's
+  /// exactly one owner, set at workspace creation; transferring ownership
+  /// is a separate, not-yet-built flow.
+  async updateMemberRole(
+    workspaceId: string,
+    targetUserId: string,
+    requesterId: string,
+    role: 'manager' | 'cashier' | 'member',
+  ) {
+    const workspace = await this.workspacesRepository.findOne({ where: { id: workspaceId } });
+    if (!workspace) {
+      throw new AppException('NOT_FOUND', 'Không tìm thấy workspace');
+    }
+    if (workspace.ownerId !== requesterId) {
+      throw new AppException('FORBIDDEN', 'Chỉ chủ sở hữu mới có thể đổi vai trò thành viên');
+    }
+    if (targetUserId === workspace.ownerId) {
+      throw new AppException('VALIDATION_ERROR', 'Không thể đổi vai trò của chủ sở hữu');
+    }
+    const member = await this.membersRepository.findOne({ where: { workspaceId, userId: targetUserId } });
+    if (!member) {
+      throw new AppException('NOT_FOUND', 'Không tìm thấy thành viên trong workspace này');
+    }
+    member.role = role;
+    await this.membersRepository.save(member);
+    return { user_id: targetUserId, role: member.role };
+  }
 }

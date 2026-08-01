@@ -59,6 +59,15 @@ class Transaction {
   final DateTime createdAt;
   final String status;
 
+  /// Giá vốn (Mục — "tính lợi nhuận theo vốn"), only ever set on an
+  /// `income` transaction — null means "not recorded", not zero.
+  final num? costAmount;
+
+  /// `amount - costAmount` for an income transaction that recorded a cost;
+  /// null otherwise (never fabricated client-side — this mirrors exactly
+  /// what the backend computed and returned).
+  final num? profit;
+
   /// True only for a client-side optimistic echo of a transaction created
   /// while offline and still sitting in the sync queue (Mục 14) — never
   /// set from a real server response. Lets the UI show a "Chờ đồng bộ"
@@ -76,6 +85,8 @@ class Transaction {
     this.customer,
     required this.createdAt,
     required this.status,
+    this.costAmount,
+    this.profit,
     this.pending = false,
   });
 
@@ -101,6 +112,8 @@ class Transaction {
           : null,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now(),
       status: json['status'] as String? ?? 'completed',
+      costAmount: json['cost_amount'] as num?,
+      profit: json['profit'] as num?,
     );
   }
 }

@@ -144,7 +144,7 @@ class ReportsOverviewScreen extends ConsumerWidget {
                       children: [
                         _OverviewRow(icon: Icons.arrow_downward, label: 'Tổng thu', amount: data.report.totalIncome, color: AppColors.income, neutrals: n),
                         _OverviewRow(icon: Icons.arrow_upward, label: 'Tổng chi', amount: data.report.totalExpense, color: AppColors.expense, neutrals: n),
-                        _OverviewRow(icon: Icons.trending_up, label: 'Lợi nhuận', amount: data.report.netCashflow, color: AppColors.primary, neutrals: n),
+                        _OverviewRow(icon: Icons.trending_up, label: 'Lợi nhuận', amount: data.report.grossProfit, color: AppColors.primary, neutrals: n),
                         if (totalDebt != null)
                           _OverviewRow(icon: Icons.receipt_long, label: 'Công nợ phải thu', amount: totalDebt, color: AppColors.debt, neutrals: n),
                         if (totalAssets != null)

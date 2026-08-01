@@ -83,8 +83,10 @@ class ExcelExportService {
     sheet.appendRow([TextCellValue('Chỉ tiêu'), TextCellValue('Số tiền (đ)')]);
     final rows = <(String, num)>[
       ('Tổng thu', report.totalIncome),
+      if (report.totalCost > 0) ('Giá vốn hàng bán', report.totalCost),
       ('Tổng chi', report.totalExpense),
-      ('Lợi nhuận (dòng tiền thuần)', report.netCashflow),
+      ('Lợi nhuận', report.grossProfit),
+      ('Dòng tiền thuần', report.netCashflow),
       ('Tổng tài sản', totalAssets),
       ('Công nợ phải thu', totalDebt),
     ];

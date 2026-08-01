@@ -23,24 +23,36 @@ export class ReportsService {
       .createQueryBuilder('t')
       .select('t.type', 'type')
       .addSelect('COALESCE(SUM(t.amount), 0)', 'total')
+      .addSelect('COALESCE(SUM(t.costAmount), 0)', 'cost')
       .where('t.workspaceId = :workspaceId', { workspaceId: query.workspace_id })
       .andWhere('t.status = :status', { status: 'completed' })
       .andWhere('t.type IN (:...types)', { types: ['income', 'expense'] })
       .andWhere('t.createdAt >= :from', { from })
       .andWhere('t.createdAt < :to', { to })
       .groupBy('t.type')
-      .getRawMany<{ type: 'income' | 'expense'; total: string }>();
+      .getRawMany<{ type: 'income' | 'expense'; total: string; cost: string }>();
 
     const totals: Record<'income' | 'expense', number> = { income: 0, expense: 0 };
+    let totalCost = 0;
     for (const row of rows) {
       totals[row.type] = parseInt(row.total, 10) || 0;
+      if (row.type === 'income') totalCost = parseInt(row.cost, 10) || 0;
     }
 
     return {
       period: query.period,
       total_income: totals.income,
       total_expense: totals.expense,
+      // Pure cash movement — unaffected by giá vốn, which isn't a cash
+      // event. Kept distinct from `gross_profit` below on purpose.
       net_cashflow: totals.income - totals.expense,
+      total_cost: totalCost,
+      // Lợi nhuận gộp (Mục — "tính lợi nhuận theo vốn"): revenue minus the
+      // cost recorded against it, minus operating expense. Falls back to
+      // exactly `net_cashflow` when no transaction in the period has a
+      // recorded cost (totalCost === 0), so this is a pure superset of the
+      // pre-existing behavior, not a breaking change.
+      gross_profit: totals.income - totalCost - totals.expense,
     };
   }
 
@@ -70,6 +82,7 @@ export class ReportsService {
       .select("to_char(date_trunc('day', t.createdAt), 'YYYY-MM-DD')", 'date')
       .addSelect('t.type', 'type')
       .addSelect('COALESCE(SUM(t.amount), 0)', 'total')
+      .addSelect('COALESCE(SUM(t.costAmount), 0)', 'cost')
       .where('t.workspaceId = :workspaceId', { workspaceId: query.workspace_id })
       .andWhere('t.status = :status', { status: 'completed' })
       .andWhere('t.type IN (:...types)', { types: ['income', 'expense'] })
@@ -78,18 +91,24 @@ export class ReportsService {
       .groupBy("date_trunc('day', t.createdAt)")
       .addGroupBy('t.type')
       .orderBy("date_trunc('day', t.createdAt)", 'ASC')
-      .getRawMany<{ date: string; type: 'income' | 'expense'; total: string }>();
+      .getRawMany<{ date: string; type: 'income' | 'expense'; total: string; cost: string }>();
 
-    const byDate = new Map<string, { income: number; expense: number }>();
+    const byDate = new Map<string, { income: number; expense: number; cost: number }>();
     for (const row of rows) {
-      const entry = byDate.get(row.date) ?? { income: 0, expense: 0 };
+      const entry = byDate.get(row.date) ?? { income: 0, expense: 0, cost: 0 };
       entry[row.type] = parseInt(row.total, 10) || 0;
+      if (row.type === 'income') entry.cost = parseInt(row.cost, 10) || 0;
       byDate.set(row.date, entry);
     }
 
+    // `profit` = doanh thu − giá vốn hàng bán − chi phí. When no cost was
+    // ever recorded for a day's income, `cost` is 0 and this collapses to
+    // the original income-minus-expense figure — see Transaction.costAmount
+    // doc comment for why this is a safe, backward-compatible formula
+    // change rather than a new/renamed field.
     return Array.from(byDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, { income, expense }]) => ({ date, income, expense, profit: income - expense }));
+      .map(([date, { income, expense, cost }]) => ({ date, income, expense, cost, profit: income - cost - expense }));
   }
 
   private resolvePeriodRange(period: ReportPeriod): { from: Date; to: Date } {

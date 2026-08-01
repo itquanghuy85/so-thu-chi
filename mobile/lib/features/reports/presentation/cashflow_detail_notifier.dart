@@ -94,13 +94,23 @@ final customCashflowDetailProvider =
 
   final totalIncome = transactions.where((t) => t.type == TransactionType.income).fold<num>(0, (s, t) => s + t.amount);
   final totalExpense = transactions.where((t) => t.type == TransactionType.expense).fold<num>(0, (s, t) => s + t.amount);
+  final totalCost = transactions
+      .where((t) => t.type == TransactionType.income)
+      .fold<num>(0, (s, t) => s + (t.costAmount ?? 0));
 
   final spanDays = to.difference(from).inDays + 1;
   final buckets = spanDays > 45 ? _buildMonthlyBuckets(from, to, transactions) : _buildDailyBuckets(from, to, transactions);
   final breakdown = _buildBreakdown(transactions);
 
   return CashflowDetailData(
-    report: CashflowReport(period: 'custom', totalIncome: totalIncome, totalExpense: totalExpense, netCashflow: totalIncome - totalExpense),
+    report: CashflowReport(
+      period: 'custom',
+      totalIncome: totalIncome,
+      totalExpense: totalExpense,
+      netCashflow: totalIncome - totalExpense,
+      totalCost: totalCost,
+      grossProfit: totalIncome - totalCost - totalExpense,
+    ),
     buckets: buckets,
     breakdown: breakdown,
   );

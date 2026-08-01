@@ -37,6 +37,9 @@ class EditTransactionSheet extends ConsumerStatefulWidget {
 class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
   final _formKey = GlobalKey<FormState>();
   late final _amountController = TextEditingController(text: formatVND(widget.transaction.amount).replaceAll('đ', ''));
+  late final _costController = TextEditingController(
+    text: widget.transaction.costAmount != null ? formatVND(widget.transaction.costAmount!).replaceAll('đ', '') : '',
+  );
   late final _noteController = TextEditingController(text: widget.transaction.note ?? '');
   final _reasonController = TextEditingController();
   late TransactionType _type = widget.transaction.type;
@@ -59,6 +62,7 @@ class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
   @override
   void dispose() {
     _amountController.dispose();
+    _costController.dispose();
     _noteController.dispose();
     _reasonController.dispose();
     super.dispose();
@@ -81,6 +85,7 @@ class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
 
     setState(() => _saving = true);
     try {
+      final costText = _costController.text.trim();
       final updated = await ref.read(transactionRepositoryProvider).editTransaction(
             id: widget.transaction.id,
             type: transactionTypeToString(_type),
@@ -90,6 +95,7 @@ class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
             toVaultId: (_type == TransactionType.income || _type == TransactionType.transfer || _type == TransactionType.debtDecrease) ? _toVaultId : null,
             customerId: _customerId,
             note: _noteController.text.trim(),
+            costAmount: _type == TransactionType.income && costText.isNotEmpty ? parseCurrencyInput(costText) : null,
             reason: _reasonController.text.trim(),
           );
       if (mounted) Navigator.of(context).pop(updated);
@@ -149,6 +155,8 @@ class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
                       VaultDropdownField(label: 'Túi nhận tiền', value: _toVaultId, onChanged: (v) => setState(() => _toVaultId = v)),
                       const SizedBox(height: 12),
                       CategoryDropdownField(group: 'income', value: _categoryId, onChanged: (v) => setState(() => _categoryId = v)),
+                      const SizedBox(height: 12),
+                      AmountTextField(controller: _costController, label: 'Giá vốn hàng bán (không bắt buộc)', required: false),
                     ] else if (_type == TransactionType.expense) ...[
                       VaultDropdownField(label: 'Túi chi tiền', value: _vaultId, onChanged: (v) => setState(() => _vaultId = v)),
                       const SizedBox(height: 12),

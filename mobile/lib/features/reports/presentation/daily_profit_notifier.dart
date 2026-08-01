@@ -12,10 +12,11 @@ class ProfitBucket {
   final String label;
   final num income;
   final num expense;
+  final num cost;
 
-  const ProfitBucket({required this.label, required this.income, required this.expense});
+  const ProfitBucket({required this.label, required this.income, required this.expense, this.cost = 0});
 
-  num get profit => income - expense;
+  num get profit => income - cost - expense;
 }
 
 class DailyProfitData {
@@ -23,10 +24,17 @@ class DailyProfitData {
   final List<ProfitBucket> chartBuckets;
   final num totalIncome;
   final num totalExpense;
+  final num totalCost;
 
-  const DailyProfitData({required this.days, required this.chartBuckets, required this.totalIncome, required this.totalExpense});
+  const DailyProfitData({
+    required this.days,
+    required this.chartBuckets,
+    required this.totalIncome,
+    required this.totalExpense,
+    required this.totalCost,
+  });
 
-  num get totalProfit => totalIncome - totalExpense;
+  num get totalProfit => totalIncome - totalCost - totalExpense;
 }
 
 /// Real per-day revenue/expense/profit (Mục — "tính lãi/lỗ hàng ngày"),
@@ -58,17 +66,20 @@ DailyProfitData _buildData(DateTime from, DateTime to, List<DailySummary> rows) 
 
   final days = List.generate(dayCount, (i) {
     final d = fromDay.add(Duration(days: i));
-    return byDate[_dateKey(d)] ?? DailySummary(date: d, income: 0, expense: 0, profit: 0);
+    return byDate[_dateKey(d)] ?? DailySummary(date: d, income: 0, expense: 0, cost: 0, profit: 0);
   });
 
   final totalIncome = days.fold<num>(0, (s, d) => s + d.income);
   final totalExpense = days.fold<num>(0, (s, d) => s + d.expense);
+  final totalCost = days.fold<num>(0, (s, d) => s + d.cost);
 
   // More than ~45 days of daily bars would overlap illegibly — group by
   // month instead, same threshold as the cashflow chart.
-  final chartBuckets = dayCount > 45 ? _monthlyBuckets(days) : days.map((d) => ProfitBucket(label: '${d.date.day}/${d.date.month}', income: d.income, expense: d.expense)).toList();
+  final chartBuckets = dayCount > 45
+      ? _monthlyBuckets(days)
+      : days.map((d) => ProfitBucket(label: '${d.date.day}/${d.date.month}', income: d.income, expense: d.expense, cost: d.cost)).toList();
 
-  return DailyProfitData(days: days, chartBuckets: chartBuckets, totalIncome: totalIncome, totalExpense: totalExpense);
+  return DailyProfitData(days: days, chartBuckets: chartBuckets, totalIncome: totalIncome, totalExpense: totalExpense, totalCost: totalCost);
 }
 
 List<ProfitBucket> _monthlyBuckets(List<DailySummary> days) {
@@ -82,6 +93,7 @@ List<ProfitBucket> _monthlyBuckets(List<DailySummary> days) {
       label: '${d.date.month}/${d.date.year}',
       income: (existing?.income ?? 0) + d.income,
       expense: (existing?.expense ?? 0) + d.expense,
+      cost: (existing?.cost ?? 0) + d.cost,
     );
   }
   return order.map((k) => byMonth[k]!).toList();

@@ -91,6 +91,7 @@ class TransactionRepository {
       note: body['note'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(op['created_at'] as int),
       status: 'completed',
+      costAmount: body['cost_amount'] as num?,
       pending: true,
     );
   }
@@ -101,6 +102,7 @@ class TransactionRepository {
     required num amount,
     String? categoryId,
     String? note,
+    num? costAmount,
     String? source,
   }) {
     return _create({
@@ -110,6 +112,7 @@ class TransactionRepository {
       'amount': amount,
       if (categoryId != null) 'category_id': categoryId,
       if (note != null && note.isNotEmpty) 'note': note,
+      if (costAmount != null) 'cost_amount': costAmount,
       if (source != null) 'source': source,
     });
   }
@@ -219,6 +222,7 @@ class TransactionRepository {
           note: body['note'] as String?,
           createdAt: DateTime.now(),
           status: 'completed',
+          costAmount: body['cost_amount'] as num?,
           pending: true,
         );
       }
@@ -250,6 +254,7 @@ class TransactionRepository {
     String? toVaultId,
     String? customerId,
     String? note,
+    num? costAmount,
     String? reason,
   }) async {
     try {
@@ -261,6 +266,7 @@ class TransactionRepository {
         if (toVaultId != null) 'to_vault_id': toVaultId,
         if (customerId != null) 'customer_id': customerId,
         if (note != null && note.isNotEmpty) 'note': note,
+        if (costAmount != null) 'cost_amount': costAmount,
         if (reason != null && reason.isNotEmpty) 'reason': reason,
       });
       final body = response.data as Map<String, dynamic>;

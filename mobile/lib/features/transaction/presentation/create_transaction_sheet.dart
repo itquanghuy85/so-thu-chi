@@ -269,6 +269,7 @@ class IncomeTransactionForm extends ConsumerStatefulWidget {
 class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
+  final _costController = TextEditingController();
   final _noteController = TextEditingController();
   String? _toVaultId;
   String? _categoryId;
@@ -277,6 +278,7 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
   @override
   void dispose() {
     _amountController.dispose();
+    _costController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -286,12 +288,14 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
     setState(() => _isSaving = true);
     try {
       final workspaceId = ref.read(currentWorkspaceIdProvider);
+      final costText = _costController.text.trim();
       await ref.read(transactionRepositoryProvider).createIncome(
             workspaceId: workspaceId,
             toVaultId: _toVaultId!,
             amount: parseCurrencyInput(_amountController.text),
             categoryId: _categoryId,
             note: _noteController.text.trim(),
+            costAmount: costText.isEmpty ? null : parseCurrencyInput(costText),
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -322,6 +326,16 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController),
+          const SizedBox(height: 12),
+          AmountTextField(
+            controller: _costController,
+            label: 'Giá vốn hàng bán (không bắt buộc)',
+            required: false,
+            suffixIcon: Tooltip(
+              message: 'Để trống nếu chưa muốn tính lợi nhuận theo đơn này.\nNhập vào để hệ thống tự tính Lợi nhuận = Thu − Vốn trong báo cáo.',
+              child: const Icon(Icons.info_outline, size: 20),
+            ),
+          ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _noteController,

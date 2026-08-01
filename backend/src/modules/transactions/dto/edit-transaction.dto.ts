@@ -26,6 +26,11 @@ export class EditTransactionDto {
   @IsString()
   note?: string;
 
+  @IsOptional()
+  @IsInt({ message: 'cost_amount phải là số nguyên' })
+  @Min(0, { message: 'cost_amount không được âm' })
+  cost_amount?: number;
+
   @ValidateIf((o: EditTransactionDto) => o.type === 'expense' || o.type === 'transfer')
   @IsUUID(undefined, { message: 'from_vault_id là bắt buộc cho giao dịch này' })
   from_vault_id?: string;

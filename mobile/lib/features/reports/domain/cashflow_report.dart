@@ -7,12 +7,22 @@ class CashflowReport {
   final num totalIncome;
   final num totalExpense;
   final num netCashflow;
+  final num totalCost;
+
+  /// Lợi nhuận gộp = doanh thu − giá vốn hàng bán − chi phí. Falls back to
+  /// exactly [netCashflow] when no transaction in the period recorded a
+  /// cost — see `Transaction.costAmount`'s doc comment on the backend.
+  /// Deliberately kept separate from [netCashflow] (pure cash movement,
+  /// unaffected by the non-cash "giá vốn" memo field).
+  final num grossProfit;
 
   const CashflowReport({
     required this.period,
     required this.totalIncome,
     required this.totalExpense,
     required this.netCashflow,
+    required this.totalCost,
+    required this.grossProfit,
   });
 
   factory CashflowReport.fromJson(Map<String, dynamic> json) {
@@ -21,6 +31,8 @@ class CashflowReport {
       totalIncome: (json['total_income'] as num?) ?? 0,
       totalExpense: (json['total_expense'] as num?) ?? 0,
       netCashflow: (json['net_cashflow'] as num?) ?? 0,
+      totalCost: (json['total_cost'] as num?) ?? 0,
+      grossProfit: (json['gross_profit'] as num?) ?? (json['net_cashflow'] as num?) ?? 0,
     );
   }
 }
@@ -33,15 +45,17 @@ class DailySummary {
   final DateTime date;
   final num income;
   final num expense;
+  final num cost;
   final num profit;
 
-  const DailySummary({required this.date, required this.income, required this.expense, required this.profit});
+  const DailySummary({required this.date, required this.income, required this.expense, required this.cost, required this.profit});
 
   factory DailySummary.fromJson(Map<String, dynamic> json) {
     return DailySummary(
       date: DateTime.parse(json['date'] as String),
       income: (json['income'] as num?) ?? 0,
       expense: (json['expense'] as num?) ?? 0,
+      cost: (json['cost'] as num?) ?? 0,
       profit: (json['profit'] as num?) ?? 0,
     );
   }

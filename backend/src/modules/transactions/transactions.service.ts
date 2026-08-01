@@ -54,6 +54,7 @@ export class TransactionsService {
         type: dto.type,
         categoryId: dto.category_id ?? null,
         amount: dto.amount,
+        costAmount: dto.type === 'income' ? dto.cost_amount ?? null : null,
         note: dto.note ?? null,
         status: 'completed',
         createdBy: userId,
@@ -240,6 +241,7 @@ export class TransactionsService {
       to_vault_id: dto.to_vault_id,
       customer_id: dto.customer_id,
       note: dto.note,
+      cost_amount: dto.cost_amount,
       source: 'manual',
     });
 
@@ -415,6 +417,10 @@ export class TransactionsService {
       id: transaction.id,
       type: transaction.type,
       amount: transaction.amount,
+      cost_amount: transaction.costAmount,
+      // Only meaningful (non-null) for an income transaction that actually
+      // recorded a cost — see Transaction.costAmount doc comment.
+      profit: transaction.type === 'income' && transaction.costAmount != null ? transaction.amount - transaction.costAmount : null,
       note: transaction.note,
       status: transaction.status,
       category: transaction.category ? { id: transaction.category.id, name: transaction.category.name } : null,

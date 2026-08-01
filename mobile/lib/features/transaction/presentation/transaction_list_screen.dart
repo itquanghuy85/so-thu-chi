@@ -376,6 +376,14 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                     if (transaction.fromVault != null) _DetailRow(label: 'Từ túi', value: transaction.fromVault!.name, neutrals: n),
                     if (transaction.toVault != null) _DetailRow(label: 'Đến túi', value: transaction.toVault!.name, neutrals: n),
                     if (transaction.category != null) _DetailRow(label: 'Danh mục', value: transaction.category!.name, neutrals: n),
+                    if (transaction.costAmount != null) _DetailRow(label: 'Giá vốn hàng bán', value: formatVND(transaction.costAmount!), neutrals: n),
+                    if (transaction.profit != null)
+                      _DetailRow(
+                        label: 'Lợi nhuận',
+                        value: formatVND(transaction.profit!),
+                        neutrals: n,
+                        valueColor: transaction.profit! >= 0 ? AppColors.income : AppColors.error,
+                      ),
                     if ((transaction.note ?? '').isNotEmpty) _DetailRow(label: 'Ghi chú', value: transaction.note!, neutrals: n),
                     _DetailRow(label: 'Thời gian', value: dateFormat.format(transaction.createdAt), neutrals: n),
                   ],
@@ -468,8 +476,9 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
   final ScreenNeutrals neutrals;
+  final Color? valueColor;
 
-  const _DetailRow({required this.label, required this.value, required this.neutrals});
+  const _DetailRow({required this.label, required this.value, required this.neutrals, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -479,7 +488,7 @@ class _DetailRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(width: 100, child: Text(label, style: TextStyle(color: neutrals.textSecondary))),
-          Expanded(child: Text(value, style: TextStyle(fontWeight: FontWeight.w500, color: neutrals.textPrimary))),
+          Expanded(child: Text(value, style: TextStyle(fontWeight: FontWeight.w500, color: valueColor ?? neutrals.textPrimary))),
         ],
       ),
     );

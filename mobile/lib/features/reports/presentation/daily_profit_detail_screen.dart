@@ -222,6 +222,8 @@ class _SummaryCard extends StatelessWidget {
           Text('Tổng quan $periodLabel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: neutrals.textPrimary)),
           const SizedBox(height: 12),
           _SummaryRow(icon: Icons.arrow_downward, label: 'Tổng doanh thu', amount: data.totalIncome, color: AppColors.income, neutrals: neutrals),
+          if (data.totalCost > 0)
+            _SummaryRow(icon: Icons.inventory_2_outlined, label: 'Giá vốn hàng bán', amount: data.totalCost, color: AppColors.secondary, neutrals: neutrals),
           _SummaryRow(icon: Icons.arrow_upward, label: 'Tổng chi phí', amount: data.totalExpense, color: AppColors.expense, neutrals: neutrals),
           _SummaryRow(
             icon: data.totalProfit >= 0 ? Icons.trending_up : Icons.trending_down,
@@ -278,6 +280,7 @@ class _DailyProfitTable extends StatelessWidget {
         child: Text('Chưa có ngày nào có giao dịch', style: TextStyle(color: neutrals.textSecondary)),
       );
     }
+    final showCost = rows.any((d) => d.cost > 0);
     return Container(
       decoration: neutrals.cardDecoration(radius: 16),
       clipBehavior: Clip.antiAlias,
@@ -288,16 +291,18 @@ class _DailyProfitTable extends StatelessWidget {
           dataRowMinHeight: 40,
           dataRowMaxHeight: 44,
           headingTextStyle: TextStyle(color: neutrals.textPrimary, fontWeight: FontWeight.bold),
-          columns: const [
-            DataColumn(label: Text('Ngày')),
-            DataColumn(label: Text('Thu'), numeric: true),
-            DataColumn(label: Text('Chi'), numeric: true),
-            DataColumn(label: Text('Lãi/Lỗ'), numeric: true),
+          columns: [
+            const DataColumn(label: Text('Ngày')),
+            const DataColumn(label: Text('Thu'), numeric: true),
+            if (showCost) const DataColumn(label: Text('Vốn'), numeric: true),
+            const DataColumn(label: Text('Chi'), numeric: true),
+            const DataColumn(label: Text('Lãi/Lỗ'), numeric: true),
           ],
           rows: rows
               .map((d) => DataRow(cells: [
                     DataCell(Text(DateFormat('dd/MM/yyyy').format(d.date), style: TextStyle(color: neutrals.textPrimary))),
                     DataCell(Text(formatVND(d.income), style: const TextStyle(color: AppColors.income))),
+                    if (showCost) DataCell(Text(formatVND(d.cost), style: TextStyle(color: neutrals.textSecondary))),
                     DataCell(Text(formatVND(d.expense), style: const TextStyle(color: AppColors.expense))),
                     DataCell(Text(
                       formatVND(d.profit),

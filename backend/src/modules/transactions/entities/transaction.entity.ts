@@ -33,6 +33,15 @@ export class Transaction {
   @Column({ type: 'bigint', transformer: bigintTransformer })
   amount: number;
 
+  // Giá vốn (Mục — "tính lợi nhuận theo vốn"): optional, only meaningful on
+  // `income` transactions. When set, per-transaction profit is
+  // `amount - costAmount`; when left blank it contributes 0 to cost, so
+  // reports fall back to the original income-minus-expense profit exactly
+  // as before this field existed — see ReportsService for the aggregate
+  // formula.
+  @Column({ name: 'cost_amount', type: 'bigint', transformer: bigintTransformer, nullable: true })
+  costAmount: number | null;
+
   @Column({ type: 'text', nullable: true })
   note: string | null;
 

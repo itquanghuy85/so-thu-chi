@@ -23,6 +23,16 @@ export class CreateTransactionDto {
   @IsString()
   note?: string;
 
+  // Optional giá vốn (Mục — "tính lợi nhuận theo vốn"), meaningful on
+  // `income` transactions only — see Transaction.costAmount doc comment.
+  // Accepted (and ignored by the profit formula) on other types too rather
+  // than rejected, so the mobile form doesn't need type-conditional
+  // validation just to submit it.
+  @IsOptional()
+  @IsInt({ message: 'cost_amount phải là số nguyên' })
+  @Min(0, { message: 'cost_amount không được âm' })
+  cost_amount?: number;
+
   // Required for: expense, transfer
   @ValidateIf((o: CreateTransactionDto) => o.type === 'expense' || o.type === 'transfer')
   @IsUUID(undefined, { message: 'from_vault_id là bắt buộc cho giao dịch này' })

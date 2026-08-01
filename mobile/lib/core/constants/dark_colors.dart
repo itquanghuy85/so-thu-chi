@@ -49,6 +49,10 @@ class DarkColors {
   }
 
   /// A very subtle wash of [accent] over the dark surface — the dark-mode
-  /// counterpart to `AppColors.tint`.
-  static Color tint(Color accent) => Color.alphaBlend(accent.withValues(alpha: 0.10), background);
+  /// counterpart to `AppColors.tint`. Kept much lower alpha than the light
+  /// theme's 0.05-on-white: the same alpha reads as a pleasant pastel on
+  /// white but curdles into a muddy olive/brown wash on a near-black
+  /// background, since dark neutrals have far less headroom to absorb a
+  /// saturated accent before it dominates the blend.
+  static Color tint(Color accent) => Color.alphaBlend(accent.withValues(alpha: 0.05), background);
 }

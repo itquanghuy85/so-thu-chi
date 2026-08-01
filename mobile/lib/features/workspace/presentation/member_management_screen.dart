@@ -169,15 +169,20 @@ class MemberManagementScreen extends ConsumerWidget {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),
-            for (final role in roles)
-              RadioListTile<String>(
-                value: role,
-                // ignore: deprecated_member_use
-                groupValue: member.role,
-                title: Text(_roleLabel(role)),
-                subtitle: Text(_roleDescription(role), style: const TextStyle(fontSize: 12)),
-                onChanged: (v) => Navigator.of(sheetContext).pop(v),
+            RadioGroup<String>(
+              groupValue: member.role,
+              onChanged: (v) => Navigator.of(sheetContext).pop(v),
+              child: Column(
+                children: [
+                  for (final role in roles)
+                    RadioListTile<String>(
+                      value: role,
+                      title: Text(_roleLabel(role)),
+                      subtitle: Text(_roleDescription(role), style: const TextStyle(fontSize: 12)),
+                    ),
+                ],
               ),
+            ),
             const SizedBox(height: 8),
           ],
         ),

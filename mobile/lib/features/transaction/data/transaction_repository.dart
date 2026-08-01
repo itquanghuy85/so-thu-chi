@@ -1,16 +1,20 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/offline/app_database.dart';
+import '../../../core/offline/sync_queue_service.dart';
 import '../../../shared/providers/dio_provider.dart';
 import '../domain/transaction.dart';
 
 class TransactionRepository {
   final Dio _dio;
+  final SyncQueueService _syncQueueService;
 
-  TransactionRepository(this._dio);
+  TransactionRepository(this._dio, this._syncQueueService);
 
   Future<TransactionPage> getTransactions({
     required String workspaceId,
@@ -191,43 +195,44 @@ class TransactionRepository {
     });
   }
 
-  /// Creates the transaction normally. If the device has no connectivity
-  /// (or the server is unreachable), the write is queued in the local
-  /// outbox (Mục 14) and an optimistic **pending** echo is returned instead
-  /// of throwing — the caller's "Lưu" flow completes as normal, and the
-  /// entry shows a "Chờ đồng bộ" badge until `SyncQueueService.flush()`
-  /// (auto-triggered on reconnect) replays the exact same POST body.
+  /// Always saves locally first and syncs in the background (Mục —
+  /// "lưu offline trước, sync nền sau"), regardless of whether the device
+  /// is online: the write goes straight into the local outbox (Mục 14) and
+  /// an optimistic **pending** echo is returned immediately, so "Lưu" never
+  /// makes the user wait out a network round-trip — a slow connection used
+  /// to mean a visibly stuck save button, now it doesn't. A background
+  /// `SyncQueueService.flush()` (fired here, not awaited) replays the exact
+  /// same POST within roughly a second on a working connection; the
+  /// pending echo simply persists longer on a slow/offline one, same as
+  /// before this change.
+  ///
   /// A genuine server-side rejection (validation, insufficient balance,
-  /// wrong workspace, ...) still throws [ApiException] as before — only
-  /// connectivity failures are queued.
+  /// wrong workspace, ...) can no longer block "Lưu" itself — by the time
+  /// it's known, the sheet has already closed. It's never silently
+  /// dropped, though: `SyncQueueService.flush()` marks the row `'failed'`
+  /// with the server's message instead of deleting it, and
+  /// `failedSyncCountProvider` surfaces it (see `OfflineBanner`) until the
+  /// user reviews and dismisses it.
   Future<Transaction> _create(Map<String, dynamic> body) async {
-    try {
-      final response = await _dio.post(ApiEndpoints.transactions, data: body);
-      return Transaction.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      final apiError = ApiException.fromDioException(e);
-      if (apiError.code == 'CONNECTION_ERROR' || apiError.code == 'TIMEOUT') {
-        final localRef = 'pending-${DateTime.now().microsecondsSinceEpoch}';
-        await AppDatabase.instance.enqueueOperation(
-          workspaceId: body['workspace_id'] as String,
-          kind: 'create_transaction',
-          endpoint: ApiEndpoints.transactions,
-          payload: body,
-          localRef: localRef,
-        );
-        return Transaction(
-          id: localRef,
-          type: transactionTypeFromString(body['type'] as String? ?? 'income'),
-          amount: (body['amount'] as num?) ?? 0,
-          note: body['note'] as String?,
-          createdAt: DateTime.now(),
-          status: 'completed',
-          costAmount: body['cost_amount'] as num?,
-          pending: true,
-        );
-      }
-      throw apiError;
-    }
+    final localRef = 'pending-${DateTime.now().microsecondsSinceEpoch}';
+    await AppDatabase.instance.enqueueOperation(
+      workspaceId: body['workspace_id'] as String,
+      kind: 'create_transaction',
+      endpoint: ApiEndpoints.transactions,
+      payload: body,
+      localRef: localRef,
+    );
+    unawaited(_syncQueueService.flush());
+    return Transaction(
+      id: localRef,
+      type: transactionTypeFromString(body['type'] as String? ?? 'income'),
+      amount: (body['amount'] as num?) ?? 0,
+      note: body['note'] as String?,
+      createdAt: DateTime.now(),
+      status: 'completed',
+      costAmount: body['cost_amount'] as num?,
+      pending: true,
+    );
   }
 
   Future<Transaction> voidTransaction(String id, {String? reason}) async {
@@ -278,5 +283,5 @@ class TransactionRepository {
 }
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
-  return TransactionRepository(ref.watch(dioProvider));
+  return TransactionRepository(ref.watch(dioProvider), ref.watch(syncQueueServiceProvider));
 });

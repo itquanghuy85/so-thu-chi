@@ -24,9 +24,11 @@ class SyncQueueService {
   /// Processes the queue in FIFO order. Stops at the first item that still
   /// fails for connectivity reasons (no point trying the rest — assume
   /// still offline, try again on the next trigger). An item that fails for
-  /// a genuine server-side reason (validation, conflict, etc.) is dropped
-  /// with its error recorded, rather than blocking every later item behind
-  /// a mutation the server will never accept.
+  /// a genuine server-side reason (validation, conflict, etc.) is marked
+  /// `status = 'failed'` — kept, not dropped, so the user can actually see
+  /// what didn't go through (see `AppDatabase.markOperationFailed`) — and
+  /// flushing continues with the rest of the queue rather than blocking
+  /// everything behind a mutation the server will never accept.
   Future<void> flush() async {
     if (_flushing) return;
     _flushing = true;
@@ -46,11 +48,7 @@ class SyncQueueService {
             // queue intact for the next flush attempt.
             break;
           }
-          // A real server-side rejection (validation, insufficient balance,
-          // etc.) — this mutation will never succeed as-is. Record the
-          // reason and drop it rather than blocking everything behind it.
-          await AppDatabase.instance.setOperationError(id, apiError.message);
-          await AppDatabase.instance.deleteOperation(id);
+          await AppDatabase.instance.markOperationFailed(id, apiError.message);
         }
       }
     } finally {
@@ -75,6 +73,14 @@ final pendingSyncCountProvider = FutureProvider.autoDispose<int>((ref) async {
   return ref.watch(syncQueueServiceProvider).pendingCount();
 });
 
+/// Mutations the server genuinely rejected (validation, insufficient
+/// balance, ...) and that are still sitting unacknowledged — see
+/// `AppDatabase.getFailedOperations`. Distinct from [pendingSyncCountProvider]:
+/// pending just hasn't synced *yet*, failed means it never will as-is.
+final failedSyncCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  return AppDatabase.instance.countFailedOperations();
+});
+
 /// Side-effect-only provider: watches connectivity and flushes the queue
 /// the moment the device comes back online. Instantiated once from the app
 /// root (see `MainShellScreen`) via `ref.watch`, not read elsewhere.
@@ -82,6 +88,7 @@ final autoFlushOnReconnectProvider = Provider<void>((ref) {
   void flushAndRefreshCount() {
     ref.read(syncQueueServiceProvider).flush().then((_) {
       ref.invalidate(pendingSyncCountProvider);
+      ref.invalidate(failedSyncCountProvider);
     });
   }
 

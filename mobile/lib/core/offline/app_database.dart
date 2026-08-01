@@ -38,7 +38,7 @@ class AppDatabase {
     final path = p.join(dbPath, 'sothuchi_offline.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE response_cache (
@@ -57,6 +57,7 @@ class AppDatabase {
             payload TEXT NOT NULL,
             local_ref TEXT NOT NULL,
             created_at INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
             last_error TEXT
           )
         ''');
@@ -65,6 +66,9 @@ class AppDatabase {
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute(_fieldHistoryTableSql);
+        }
+        if (oldVersion < 3) {
+          await db.execute("ALTER TABLE pending_operations ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
         }
       },
     );
@@ -170,7 +174,9 @@ class AppDatabase {
 
   /// Queues a mutation to replay later. [localRef] is a client-generated id
   /// (e.g. `pending-<timestamp>`) so the caller can show an optimistic echo
-  /// in a list before the real server id exists.
+  /// in a list before the real server id exists. Always starts `status =
+  /// 'pending'` — see [markOperationFailed] for what happens if the server
+  /// ultimately rejects it.
   Future<int> enqueueOperation({
     required String workspaceId,
     required String kind,
@@ -186,20 +192,40 @@ class AppDatabase {
       'payload': jsonEncode(payload),
       'local_ref': localRef,
       'created_at': DateTime.now().millisecondsSinceEpoch,
+      'status': 'pending',
       'last_error': null,
     });
   }
 
-  /// Returns queued rows with `payload` already decoded back into a `Map`
-  /// (it's stored as a JSON string internally) so every caller works with
-  /// the same shape it originally enqueued.
+  /// Rows still waiting to be replayed (`status = 'pending'`), with
+  /// `payload` already decoded back into a `Map`. Excludes rows the server
+  /// has already rejected — see [getFailedOperations] for those.
   Future<List<Map<String, dynamic>>> getPendingOperations({String? workspaceId}) async {
     final db = await database;
     final rows = await db.query(
       'pending_operations',
-      where: workspaceId != null ? 'workspace_id = ?' : null,
+      where: workspaceId != null ? "workspace_id = ? AND status = 'pending'" : "status = 'pending'",
       whereArgs: workspaceId != null ? [workspaceId] : null,
       orderBy: 'created_at ASC',
+    );
+    return rows.map((row) {
+      final payload = jsonDecode(row['payload'] as String) as Map<String, dynamic>;
+      return {...row, 'payload': payload};
+    }).toList();
+  }
+
+  /// Rows the server has genuinely rejected (validation, insufficient
+  /// balance, ...) — kept around with their `last_error` instead of being
+  /// silently dropped, so [dismissFailedOperation] is the user's own choice
+  /// to make, not something that happens invisibly the moment a background
+  /// sync fails.
+  Future<List<Map<String, dynamic>>> getFailedOperations({String? workspaceId}) async {
+    final db = await database;
+    final rows = await db.query(
+      'pending_operations',
+      where: workspaceId != null ? "workspace_id = ? AND status = 'failed'" : "status = 'failed'",
+      whereArgs: workspaceId != null ? [workspaceId] : null,
+      orderBy: 'created_at DESC',
     );
     return rows.map((row) {
       final payload = jsonDecode(row['payload'] as String) as Map<String, dynamic>;
@@ -212,17 +238,33 @@ class AppDatabase {
     await db.delete('pending_operations', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> setOperationError(int id, String error) async {
+  /// Marks a queued mutation as rejected by the server — kept in the table
+  /// (not deleted) so it surfaces in [getFailedOperations] until the user
+  /// explicitly dismisses it via [dismissFailedOperation].
+  Future<void> markOperationFailed(int id, String error) async {
     final db = await database;
-    await db.update('pending_operations', {'last_error': error}, where: 'id = ?', whereArgs: [id]);
+    await db.update('pending_operations', {'status': 'failed', 'last_error': error}, where: 'id = ?', whereArgs: [id]);
   }
+
+  Future<void> dismissFailedOperation(int id) => deleteOperation(id);
 
   Future<int> countPendingOperations({String? workspaceId}) async {
     final db = await database;
     final rows = await db.query(
       'pending_operations',
       columns: ['COUNT(*) as c'],
-      where: workspaceId != null ? 'workspace_id = ?' : null,
+      where: workspaceId != null ? "workspace_id = ? AND status = 'pending'" : "status = 'pending'",
+      whereArgs: workspaceId != null ? [workspaceId] : null,
+    );
+    return Sqflite.firstIntValue(rows) ?? 0;
+  }
+
+  Future<int> countFailedOperations({String? workspaceId}) async {
+    final db = await database;
+    final rows = await db.query(
+      'pending_operations',
+      columns: ['COUNT(*) as c'],
+      where: workspaceId != null ? "workspace_id = ? AND status = 'failed'" : "status = 'failed'",
       whereArgs: workspaceId != null ? [workspaceId] : null,
     );
     return Sqflite.firstIntValue(rows) ?? 0;

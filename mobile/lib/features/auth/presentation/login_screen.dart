@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import 'auth_hero_header.dart';
 import 'auth_notifier.dart';
 import 'social_sign_in_buttons.dart';
 
@@ -62,87 +63,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 24),
-                  Container(
-                    width: 72,
-                    height: 72,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(colors: AppColors.headerGradient),
-                      shape: BoxShape.circle,
+      backgroundColor: AppColors.surface,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AuthHeroHeader(
+              title: 'Sổ Thu Chi',
+              subtitle: 'Quản lý dòng tiền cho shop và gia đình,\nrõ ràng và đơn giản',
+            ),
+            AuthFormSheet(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Đăng nhập', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      decoration: authFieldDecoration(label: 'Email', icon: Icons.mail_outline),
+                      validator: _validateEmail,
                     ),
-                    child: const Icon(Icons.savings_rounded, size: 38, color: Colors.white),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Sổ Thu Chi',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Đăng nhập để tiếp tục quản lý dòng tiền',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 28),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.mail_outline),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      decoration: authFieldDecoration(
+                        label: 'Mật khẩu',
+                        icon: Icons.lock_outline,
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      validator: _validatePassword,
                     ),
-                    validator: _validateEmail,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Mật khẩu',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    const SizedBox(height: 24),
+                    AuthPrimaryButton(label: 'Đăng nhập', loading: _isSubmitting, onPressed: _submit),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => context.push('/register'),
+                        child: RichText(
+                          text: const TextSpan(
+                            style: TextStyle(fontSize: 13.5, color: AppColors.textSecondary),
+                            children: [
+                              TextSpan(text: 'Chưa có tài khoản? '),
+                              TextSpan(text: 'Đăng ký ngay', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    validator: _validatePassword,
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _isSubmitting ? null : _submit,
-                    style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Đăng nhập'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => context.push('/register'),
-                    child: const Text('Chưa có tài khoản? Đăng ký'),
-                  ),
-                  const SizedBox(height: 8),
-                  const SocialSignInButtons(),
-                ],
+                    const SizedBox(height: 4),
+                    const SocialSignInButtons(),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

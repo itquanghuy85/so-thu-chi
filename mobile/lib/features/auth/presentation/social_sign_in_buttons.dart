@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
 import '../data/social_auth_service.dart';
 import 'auth_notifier.dart';
@@ -47,30 +50,96 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
     return Column(
       children: [
         Row(
-          children: const [
-            Expanded(child: Divider()),
+          children: [
+            const Expanded(child: Divider(color: AppColors.divider)),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Text('hoặc', style: TextStyle(color: Colors.grey)),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Text('hoặc', style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600)),
             ),
-            Expanded(child: Divider()),
+            const Expanded(child: Divider(color: AppColors.divider)),
           ],
         ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: _busy ? null : () => _handle(_service.signInWithGoogle, 'google'),
-          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
-          icon: const Icon(Icons.g_mobiledata, size: 28),
-          label: const Text('Đăng nhập với Google'),
+        const SizedBox(height: 18),
+        SizedBox(
+          height: 50,
+          child: OutlinedButton(
+            onPressed: _busy ? null : () => _handle(_service.signInWithGoogle, 'google'),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: AppColors.divider),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(width: 20, height: 20, child: CustomPaint(painter: _GoogleGPainter())),
+                const SizedBox(width: 12),
+                Text('Đăng nhập với Google', style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.87), fontWeight: FontWeight.w600, fontSize: 14.5)),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: _busy ? null : () => _handle(_service.signInWithApple, 'apple'),
-          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
-          icon: const Icon(Icons.apple, size: 22),
-          label: const Text('Đăng nhập với Apple'),
+        SizedBox(
+          height: 50,
+          child: FilledButton(
+            onPressed: _busy ? null : () => _handle(_service.signInWithApple, 'apple'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.apple, color: Colors.white, size: 22),
+                SizedBox(width: 8),
+                Text('Đăng nhập với Apple', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14.5)),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
+}
+
+/// Draws an approximation of the Google "G" mark (4-color ring + the
+/// crossbar) — `Icons.g_mobiledata` (the previous icon here) is Android's
+/// mobile-data-network glyph, not a Google logo, and reads as a mistake up
+/// close. No brand asset is bundled with the app, so this is painted
+/// directly rather than shipping an image.
+class _GoogleGPainter extends CustomPainter {
+  const _GoogleGPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final strokeWidth = size.width * 0.24;
+    final radius = size.width / 2 - strokeWidth / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    void arc(double startDeg, double sweepDeg, Color color) {
+      ringPaint.color = color;
+      canvas.drawArc(rect, startDeg * math.pi / 180, sweepDeg * math.pi / 180, false, ringPaint);
+    }
+
+    arc(-84, 78, const Color(0xFF4285F4));
+    arc(-2, 78, const Color(0xFF34A853));
+    arc(80, 78, const Color(0xFFFBBC05));
+    arc(162, 78, const Color(0xFFEA4335));
+
+    final barPaint = Paint()..color = const Color(0xFF4285F4);
+    canvas.drawRect(
+      Rect.fromLTWH(center.dx - strokeWidth * 0.1, center.dy - strokeWidth / 2, radius + strokeWidth * 0.1, strokeWidth),
+      barPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

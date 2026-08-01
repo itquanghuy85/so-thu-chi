@@ -10,22 +10,27 @@ Classic theme, restyled to match a supplied set of reference screens
 ## Requirements
 
 - Flutter 3.41.4 (Dart 3.11.1) or compatible.
-- A running instance of the backend (NestJS) — see `../backend`. The API
-  contract this app was built against is documented inline in
-  `lib/core/constants/api_endpoints.dart` and the repo's `readme.md`.
+- A backend to talk to. By default the app points at the always-on
+  production backend (Render + Neon — see `../backend/README.md`'s
+  "Deploying to the cloud" section), so no local setup is required to just
+  run the app. Point at a local backend instead only when actively changing
+  backend code — see `../backend`.
 
 ## Running
 
 ```bash
 flutter pub get
 
-# Android emulator (default — 10.0.2.2 maps to the host machine's localhost):
+# Default — talks to the production backend on Render, no local setup needed:
 flutter run
 
-# iOS Simulator / web / a backend on a different host:
+# Local backend instead (Android emulator; 10.0.2.2 maps to the host machine's localhost):
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/v1
+
+# Local backend, iOS Simulator / web:
 flutter run --dart-define=API_BASE_URL=http://localhost:3000/v1
 
-# Physical device on the same Wi-Fi as the backend:
+# Local backend, physical device on the same Wi-Fi as the backend:
 flutter run --dart-define=API_BASE_URL=http://<host-lan-ip>:3000/v1
 ```
 

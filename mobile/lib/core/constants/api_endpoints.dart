@@ -1,10 +1,16 @@
 /// Centralized API configuration for Sổ Thu Chi.
 ///
-/// The default [baseUrl] points at `10.0.2.2`, which is the special alias the
-/// Android emulator uses to reach `localhost` on the host machine running the
-/// backend (NestJS) on port 3000.
+/// The default [baseUrl] points at the always-on production backend
+/// (NestJS on Render + Postgres on Neon — see backend/README.md's
+/// "Deploying to the cloud" section), so a normal `flutter run`/release
+/// build works from anywhere with no local backend required. The free
+/// Render tier spins down after ~15 min idle, so the very first request
+/// after a quiet period can take several extra seconds while it wakes back
+/// up — not a bug, just that tier's trade-off for being free.
 ///
-/// Override at build/run time for other targets, e.g.:
+/// Override at build/run time when working against a local backend instead:
+/// - Android emulator (10.0.2.2 aliases the host machine's localhost):
+///   `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/v1`
 /// - iOS Simulator / physical device on the same Wi-Fi / web (Chrome):
 ///   `flutter run --dart-define=API_BASE_URL=http://localhost:3000/v1`
 /// - Physical Android device on the same LAN:
@@ -14,7 +20,7 @@ class ApiEndpoints {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000/v1',
+    defaultValue: 'https://so-thu-chi.onrender.com/v1',
   );
 
   // Auth

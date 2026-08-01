@@ -27,9 +27,16 @@ class DioClient {
       : dio = Dio(
           BaseOptions(
             baseUrl: ApiEndpoints.baseUrl,
-            connectTimeout: const Duration(seconds: 15),
-            receiveTimeout: const Duration(seconds: 15),
-            sendTimeout: const Duration(seconds: 15),
+            // Connect is capped shorter than receive/send: if a TCP
+            // handshake hasn't completed in 8s the path is broken (a
+            // router isolating this device from the backend host, wrong
+            // Wi-Fi, etc.) — waiting the full receive/send budget for that
+            // case just makes every screen feel frozen. Once actually
+            // connected, a slow mobile connection genuinely transferring
+            // data gets more slack.
+            connectTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 12),
+            sendTimeout: const Duration(seconds: 12),
             contentType: 'application/json',
           ),
         ) {

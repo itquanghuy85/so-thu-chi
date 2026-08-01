@@ -1,0 +1,57 @@
+# --- Secrets — never commit ---
+backend/.env
+backend/firebase-service-account.json
+**/*.keystore
+**/*.jks
+**/key.properties
+**/GoogleService-Info.plist.bak
+
+# --- Backend (NestJS) ---
+backend/node_modules/
+backend/dist/
+backend/*.log
+backend/npm-debug.log*
+
+# --- Mobile (Flutter) ---
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/flutter_run.log
+mobile/flutter_run.stdin
+
+# Android
+mobile/android/.gradle/
+mobile/android/captures/
+mobile/android/local.properties
+mobile/android/**/GeneratedPluginRegistrant.java
+mobile/android/app/*.jks
+
+# iOS
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Flutter/App.framework
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/ios/Runner/GeneratedPluginRegistrant.*
+mobile/ios/*.mode1v3
+mobile/ios/*.mode2v3
+mobile/ios/*.moved-aside
+mobile/ios/*.pbxuser
+mobile/ios/*.perspectivev3
+mobile/ios/**/xcuserdata/
+
+# --- Editors / OS ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# --- Claude / scratch ---
+.claude/

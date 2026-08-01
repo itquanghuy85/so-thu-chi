@@ -1,0 +1,365 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../core/constants/app_colors.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../core/offline/sync_queue_service.dart';
+import '../../../core/utils/currency_formatter.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/sheet_drag_handle.dart';
+import '../data/transaction_repository.dart';
+import '../domain/transaction.dart';
+import 'create_transaction_sheet.dart';
+import 'transaction_display.dart';
+import 'transaction_list_notifier.dart';
+
+class TransactionListScreen extends ConsumerStatefulWidget {
+  const TransactionListScreen({super.key});
+
+  @override
+  ConsumerState<TransactionListScreen> createState() => _TransactionListScreenState();
+}
+
+class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      ref.read(transactionListProvider.notifier).loadNextPage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(transactionListProvider);
+    final notifier = ref.read(transactionListProvider.notifier);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(title: const Text('Giao dịch')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: TransactionPeriodFilter.values.map((p) {
+                  final selected = state.filter.period == p;
+                  final label = p == TransactionPeriodFilter.custom && selected && state.filter.customRange != null
+                      ? '${DateFormat('dd/MM').format(state.filter.customRange!.start)} - ${DateFormat('dd/MM').format(state.filter.customRange!.end)}'
+                      : p.label;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(label),
+                      selected: selected,
+                      onSelected: (_) async {
+                        if (p == TransactionPeriodFilter.custom) {
+                          final range = await showDateRangePicker(
+                            context: context,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                            initialDateRange: state.filter.customRange,
+                          );
+                          if (range == null) return;
+                          notifier.setFilter(state.filter.copyWith(period: p, customRange: range));
+                        } else {
+                          notifier.setFilter(state.filter.copyWith(period: p));
+                        }
+                      },
+                      selectedColor: AppColors.primary,
+                      labelStyle: TextStyle(color: selected ? Colors.white : AppColors.textPrimary, fontSize: 12),
+                      backgroundColor: AppColors.surface,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      side: BorderSide.none,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _TypeChip(label: 'Loại', selected: state.filter.type == null, icon: Icons.filter_list, onTap: () => notifier.setFilter(state.filter.copyWith(clearType: true))),
+                  const SizedBox(width: 8),
+                  _TypeChip(label: 'Thu', selected: state.filter.type == TransactionType.income, color: AppColors.income, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.income))),
+                  const SizedBox(width: 8),
+                  _TypeChip(label: 'Chi', selected: state.filter.type == TransactionType.expense, color: AppColors.expense, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.expense))),
+                  const SizedBox(width: 8),
+                  _TypeChip(label: 'Chuyển', selected: state.filter.type == TransactionType.transfer, color: AppColors.transfer, onTap: () => notifier.setFilter(state.filter.copyWith(type: TransactionType.transfer))),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: Builder(builder: (context) {
+              if (state.isLoading && state.items.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (state.errorMessage != null && state.items.isEmpty) {
+                return Center(child: Text(state.errorMessage!));
+              }
+              if (state.items.isEmpty) {
+                return const EmptyStateWidget(
+                  message: 'Không có giao dịch nào trong bộ lọc này.',
+                  icon: Icons.receipt_long_outlined,
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: () => notifier.loadFirstPage(),
+                child: ListView.separated(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                  separatorBuilder: (_, _) => const SizedBox(height: 4),
+                  itemBuilder: (context, index) {
+                    if (index >= state.items.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    }
+                    final transaction = state.items[index];
+                    return TransactionTile(
+                      transaction: transaction,
+                      onTap: () => showTransactionDetailSheet(context, ref, transaction),
+                    );
+                  },
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final created = await showCreateTransactionSheet(context);
+          if (created == true) {
+            notifier.loadFirstPage();
+            ref.invalidate(pendingSyncCountProvider);
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _TypeChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final Color? color;
+  final IconData? icon;
+  final VoidCallback onTap;
+
+  const _TypeChip({required this.label, required this.selected, this.color, this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final chipColor = color ?? AppColors.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? chipColor.withValues(alpha: 0.14) : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? chipColor : AppColors.divider),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[Icon(icon, size: 14, color: selected ? chipColor : AppColors.textSecondary), const SizedBox(width: 4)],
+            Text(label, style: TextStyle(fontSize: 12, color: selected ? chipColor : AppColors.textSecondary, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TransactionTile extends StatelessWidget {
+  final Transaction transaction;
+  final VoidCallback? onTap;
+
+  const TransactionTile({super.key, required this.transaction, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = transactionColor(transaction.type);
+    final timeFormat = DateFormat('HH:mm dd/MM', 'vi_VN');
+    final isVoided = transaction.isVoided;
+
+    return Opacity(
+      opacity: isVoided ? 0.5 : 1,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: ListTile(
+          onTap: onTap,
+          leading: CircleAvatar(
+            backgroundColor: color.withValues(alpha: 0.12),
+            child: Icon(transactionIcon(transaction.type), color: color, size: 20),
+          ),
+          title: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  transactionTypeLabel(transaction.type) + (isVoided ? ' (đã hủy)' : ''),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (transaction.pending) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.transfer.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('Chờ đồng bộ', style: TextStyle(fontSize: 10, color: AppColors.transfer, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ],
+          ),
+          subtitle: Text(
+            [transactionDescription(transaction), timeFormat.format(transaction.createdAt)]
+                .where((s) => s.isNotEmpty)
+                .join(' • '),
+          ),
+          trailing: Text(
+            '${transactionAmountSign(transaction.type)}${formatVND(transaction.amount)}',
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet showing transaction detail (Mục 12.5.1) with a "Hủy giao
+/// dịch" action when the transaction is still active.
+void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction transaction) {
+  final color = transactionColor(transaction.type);
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (sheetContext) {
+      final dateFormat = DateFormat('HH:mm, dd/MM/yyyy', 'vi_VN');
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(child: SheetDragHandle()),
+              const SizedBox(height: 8),
+              Center(
+                child: CircleAvatar(radius: 26, backgroundColor: color.withValues(alpha: 0.12), child: Icon(transactionIcon(transaction.type), color: color)),
+              ),
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  '${transactionAmountSign(transaction.type)}${formatVND(transaction.amount)}',
+                  style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Center(
+                child: Text(
+                  transactionTypeLabel(transaction.type) + (transaction.isVoided ? ' • Đã hủy' : ''),
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14)),
+                child: Column(
+                  children: [
+                    if (transaction.fromVault != null) _DetailRow(label: 'Từ túi', value: transaction.fromVault!.name),
+                    if (transaction.toVault != null) _DetailRow(label: 'Đến túi', value: transaction.toVault!.name),
+                    if (transaction.category != null) _DetailRow(label: 'Danh mục', value: transaction.category!.name),
+                    if ((transaction.note ?? '').isNotEmpty) _DetailRow(label: 'Ghi chú', value: transaction.note!),
+                    _DetailRow(label: 'Thời gian', value: dateFormat.format(transaction.createdAt)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (!transaction.isVoided)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('Hủy giao dịch'),
+                    onPressed: () async {
+                      try {
+                        final updated =
+                            await ref.read(transactionRepositoryProvider).voidTransaction(transaction.id);
+                        ref.read(transactionListProvider.notifier).replaceTransaction(updated);
+                        if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                      } catch (e) {
+                        final message = e is ApiException ? e.message : 'Không thể hủy giao dịch';
+                        if (sheetContext.mounted) {
+                          ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content: Text(message)));
+                        }
+                      }
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 100, child: Text(label, style: const TextStyle(color: AppColors.textSecondary))),
+          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
+        ],
+      ),
+    );
+  }
+}

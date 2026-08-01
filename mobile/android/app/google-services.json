@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "57154351827",
+    "project_id": "sothuchi-d055a",
+    "storage_bucket": "sothuchi-d055a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:57154351827:android:a0e511b2a49760e7125a26",
+        "android_client_info": {
+          "package_name": "com.moneyflow.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "57154351827-175ls4sl2nivhap99o1rk82n753nh7ki.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.moneyflow.mobile",
+            "certificate_hash": "28bed0a3a96e0c1ce3d466ede1b7fe4572c8070b"
+          }
+        },
+        {
+          "client_id": "57154351827-rt3qb734iagju2thj9ibgf44v09bi6ik.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAwNxHKDAZzMSInH2jBog9k6briy4FSws"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "57154351827-rt3qb734iagju2thj9ibgf44v09bi6ik.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

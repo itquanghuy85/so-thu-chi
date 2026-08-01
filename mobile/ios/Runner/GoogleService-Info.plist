@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>57154351827-s7q6j3jr1jcfdpi679i0h985oo311sog.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.57154351827-s7q6j3jr1jcfdpi679i0h985oo311sog</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>57154351827-175ls4sl2nivhap99o1rk82n753nh7ki.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDP8CVi_TJ11J-uvoVbOfQX6ONo4xJ-PXg</string>
+	<key>GCM_SENDER_ID</key>
+	<string>57154351827</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.moneyflow.mobile</string>
+	<key>PROJECT_ID</key>
+	<string>sothuchi-d055a</string>
+	<key>STORAGE_BUCKET</key>
+	<string>sothuchi-d055a.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:57154351827:ios:ab93f814a229965e125a26</string>
+</dict>
+</plist>

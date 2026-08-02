@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/theme/screen_neutrals.dart';
+import '../../../core/theme/visual_style_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
@@ -12,7 +14,9 @@ import '../../category/domain/category.dart';
 import '../../category/domain/category_icons.dart';
 import '../../vault/data/vault_repository.dart';
 import '../data/transaction_repository.dart';
+import '../domain/transaction.dart';
 import 'debt_transaction_tab.dart';
+import 'transaction_display.dart' show transactionColor;
 
 /// Opens the "create transaction" bottom sheet (Mục 12.5 / 12.5.1), with
 /// tabs Thu / Chi / Chuyển tiền / Công nợ. Returns `true` if a transaction
@@ -176,16 +180,18 @@ class CategoryDropdownField extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(group == 'income' ? incomeCategoriesProvider : expenseCategoriesProvider);
-    final accent = group == 'income' ? AppColors.income : AppColors.expense;
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final accent = transactionColor(group == 'income' ? TransactionType.income : TransactionType.expense, style);
     return categoriesAsync.when(
       data: (categories) {
         if (categories.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text('Danh mục', style: TextStyle(fontWeight: FontWeight.w600)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text('Danh mục', style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
             ),
             GridView.count(
               crossAxisCount: 4,
@@ -198,6 +204,7 @@ class CategoryDropdownField extends ConsumerWidget {
                     category: c,
                     selected: c.id == value,
                     accent: accent,
+                    neutrals: n,
                     onTap: () => onChanged(c.id == value ? null : c.id),
                   )).toList(),
             ),
@@ -214,25 +221,35 @@ class _CategoryCell extends StatelessWidget {
   final Category category;
   final bool selected;
   final Color accent;
+  final ScreenNeutrals neutrals;
   final VoidCallback onTap;
 
-  const _CategoryCell({required this.category, required this.selected, required this.accent, required this.onTap});
+  const _CategoryCell({
+    required this.category,
+    required this.selected,
+    required this.accent,
+    required this.neutrals,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final n = neutrals;
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Container(
-        decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.1) : AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? accent : Colors.transparent, width: 1.5),
-        ),
+        decoration: n.isGame
+            ? n.cardDecoration(radius: 12, accent: selected ? accent : null)
+            : BoxDecoration(
+                color: selected ? accent.withValues(alpha: 0.1) : n.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: selected ? accent : Colors.transparent, width: 1.5),
+              ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(categoryIconFor(category.icon), color: selected ? accent : AppColors.textSecondary, size: 22),
+            Icon(categoryIconFor(category.icon), color: selected ? accent : n.textSecondary, size: 22),
             const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -243,7 +260,7 @@ class _CategoryCell extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10,
-                  color: selected ? accent : AppColors.textPrimary,
+                  color: selected ? accent : n.textPrimary,
                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),

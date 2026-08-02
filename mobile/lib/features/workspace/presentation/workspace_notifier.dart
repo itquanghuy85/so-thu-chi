@@ -13,11 +13,26 @@ class WorkspaceState {
   final bool isLoading;
   final String? errorMessage;
 
+  /// True once a [loadWorkspaces] call has completed at least once (success
+  /// or failure), even if the result was an empty list. Distinct from
+  /// `workspaces.isEmpty` on purpose: the router's redirect (app.dart) used
+  /// to auto-trigger `loadWorkspaces()` whenever the list was empty and not
+  /// currently loading — harmless while a user always had at least one
+  /// workspace, but once "Xoá không gian làm việc" could leave a user with
+  /// zero, a completed load that legitimately came back empty satisfied
+  /// that same condition again, re-triggering forever (an infinite
+  /// "connecting..." spinner that survived even an app restart, since a
+  /// fresh cold start hits the exact same condition immediately). Checking
+  /// `hasLoaded` instead means the auto-trigger fires once, not on every
+  /// empty result.
+  final bool hasLoaded;
+
   const WorkspaceState({
     this.workspaces = const [],
     this.selected,
     this.isLoading = false,
     this.errorMessage,
+    this.hasLoaded = false,
   });
 
   WorkspaceState copyWith({
@@ -27,12 +42,14 @@ class WorkspaceState {
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
+    bool? hasLoaded,
   }) {
     return WorkspaceState(
       workspaces: workspaces ?? this.workspaces,
       selected: clearSelected ? null : (selected ?? this.selected),
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      hasLoaded: hasLoaded ?? this.hasLoaded,
     );
   }
 }
@@ -61,9 +78,9 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
           }
         }
       }
-      state = state.copyWith(workspaces: workspaces, selected: selected, isLoading: false);
+      state = state.copyWith(workspaces: workspaces, selected: selected, isLoading: false, hasLoaded: true);
     } on ApiException catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.message);
+      state = state.copyWith(isLoading: false, errorMessage: e.message, hasLoaded: true);
     }
   }
 
@@ -91,7 +108,11 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
 
   Future<void> clearSelection() async {
     await _secureStorage.delete(key: SecureStorageKeys.selectedWorkspaceId);
-    state = state.copyWith(clearSelected: true, workspaces: const []);
+    // hasLoaded: false so the router's redirect (app.dart) fetches a fresh
+    // list exactly once on arrival at the picker — see [hasLoaded]'s doc
+    // comment for why it must flip back to true even when that list comes
+    // back empty (e.g. the user just deleted their only workspace).
+    state = state.copyWith(clearSelected: true, workspaces: const [], hasLoaded: false);
   }
 }
 

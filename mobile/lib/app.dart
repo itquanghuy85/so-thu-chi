@@ -63,10 +63,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         return location == '/onboarding' ? null : '/onboarding';
       }
       if (workspaceState.selected == null) {
-        if (workspaceState.workspaces.isEmpty && !workspaceState.isLoading) {
+        if (!workspaceState.hasLoaded && !workspaceState.isLoading) {
           // Kick off the load once so a previously-selected workspace
           // (persisted in secure storage) is restored without the user
-          // having to tap it again after an app relaunch.
+          // having to tap it again after an app relaunch. Gated on
+          // `hasLoaded`, not `workspaces.isEmpty` — see that field's doc
+          // comment on `WorkspaceState` for why (a user with zero
+          // workspaces would otherwise retrigger this on every redirect
+          // evaluation, forever).
           Future.microtask(() => ref.read(workspaceNotifierProvider.notifier).loadWorkspaces());
         }
         return location == '/workspaces' ? null : '/workspaces';

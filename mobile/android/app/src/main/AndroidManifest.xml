@@ -14,6 +14,10 @@
          (Mục — "Thông báo đẩy"); requested at runtime via
          FirebaseMessaging.instance.requestPermission(). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Excel export → Tải xuống: only needed pre-scoped-storage (Android 9
+         and below); Android 10+ writes via MediaStore instead, which needs
+         no permission. See MainActivity.kt's saveToDownloads. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
     <application
         android:label="Sổ Thu Chi"
         android:name="${applicationName}"

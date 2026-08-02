@@ -87,6 +87,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState.unauthenticated();
   }
 
+  /// Deletes the account server-side, then signs out locally the same way
+  /// [logout] does. Throws [ApiException] (e.g. `CONFLICT` if the account
+  /// still owns a shared workspace) without changing [state] — the caller's
+  /// dialog stays open so the user sees why it failed.
+  Future<void> deleteAccount() async {
+    await _repository.deleteAccount();
+    await _repository.clearTokens();
+    await _socialAuth.signOut();
+    state = const AuthState.unauthenticated();
+  }
+
   /// Invoked by the Dio interceptor when a token refresh fails, so the
   /// router redirect can send the user back to Login. Tokens are already
   /// cleared by the interceptor at this point.

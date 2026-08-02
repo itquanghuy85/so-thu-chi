@@ -23,4 +23,8 @@ export class UsersService {
   async setFcmToken(userId: string, token: string | null): Promise<void> {
     await this.usersRepository.update({ id: userId }, { fcmToken: token });
   }
+
+  async delete(userId: string): Promise<void> {
+    await this.usersRepository.delete({ id: userId });
+  }
 }

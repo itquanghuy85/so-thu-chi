@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:excel/excel.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -11,6 +12,12 @@ import '../../features/transaction/domain/transaction.dart';
 import '../../features/transaction/presentation/transaction_display.dart';
 
 final _dateFormat = DateFormat('HH:mm dd/MM/yyyy', 'vi_VN');
+
+/// Matches `MainActivity.kt`'s `saveToDownloads` — saves into the public
+/// "Tải xuống" folder via MediaStore so the file is actually findable in
+/// any file manager, instead of the app-private directory used previously.
+const _downloadsChannel = MethodChannel('com.moneyflow.mobile/downloads');
+const _xlsxMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /// Generates a `.xlsx` workbook for one of the app's exportable datasets
 /// (Giao dịch / Công nợ / Báo cáo) and opens the OS share sheet so the user
@@ -118,35 +125,56 @@ class ExcelExportService {
     return buffer.toString();
   }
 
-  /// Prefers the app's own external files directory (Android) —
-  /// `/Android/data/<package>/files/`, browsable with any file manager and
-  /// never cleared by the OS the way a temp/cache dir can be — instead of
-  /// the previous temp directory, whose file only ever existed transiently
-  /// for the share sheet and left the user with nothing findable
-  /// afterward unless they specifically picked "Save"/"Drive" from it.
-  /// Some devices/storage states report that directory as read-only despite
-  /// path_provider handing back a path for it (observed live as a raw
-  /// `IOException: Read-only file system` with no Dart-catchable signal
-  /// beforehand) — falls back to the always-writable temp dir rather than
-  /// the export failing outright. Returns the saved path so the caller can
-  /// tell the user where it landed either way.
+  /// Saves into the public "Tải xuống" (Downloads) folder via MediaStore
+  /// (`MainActivity.kt`'s `saveToDownloads`) so the file is actually
+  /// findable afterward in any file manager or the Files app — the
+  /// previous location (`Android/data/<package>/files/`, app-private
+  /// external storage) technically worked but isn't reasonably browsable by
+  /// a normal user, which was the original complaint this replaces. Also
+  /// writes a temp copy for the OS share sheet, so "send straight to
+  /// Zalo/email" still works alongside the Downloads save. Falls back to
+  /// the old app-private-directory approach if the native call fails (non-
+  /// Android platform, or a very old Android version without the legacy
+  /// storage permission) rather than the export failing outright. Returns
+  /// where the file landed so the caller can tell the user.
   Future<String> _saveAndShare(Excel excel, String filename) async {
     final bytes = excel.encode();
     if (bytes == null) throw StateError('Không thể tạo file Excel');
+
+    String savedLocation;
+    if (Platform.isAndroid) {
+      try {
+        final result = await _downloadsChannel.invokeMethod<String>('saveToDownloads', {
+          'fileName': filename,
+          'mimeType': _xlsxMimeType,
+          'bytes': Uint8List.fromList(bytes),
+        });
+        savedLocation = result ?? 'Tải xuống/$filename';
+      } catch (_) {
+        savedLocation = await _saveToAppDirectory(bytes, filename);
+      }
+    } else {
+      savedLocation = await _saveToAppDirectory(bytes, filename);
+    }
+
+    final tempDir = await getTemporaryDirectory();
+    final shareFile = File('${tempDir.path}/$filename');
+    await shareFile.writeAsBytes(bytes, flush: true);
+    await Share.shareXFiles([XFile(shareFile.path)], text: 'Sổ Thu Chi — $filename');
+
+    return savedLocation;
+  }
+
+  Future<String> _saveToAppDirectory(List<int> bytes, String filename) async {
     Directory dir;
     try {
       dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$filename');
-      await file.writeAsBytes(bytes, flush: true);
-      await Share.shareXFiles([XFile(file.path)], text: 'Sổ Thu Chi — $filename');
-      return file.path;
     } catch (_) {
       dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$filename');
-      await file.writeAsBytes(bytes, flush: true);
-      await Share.shareXFiles([XFile(file.path)], text: 'Sổ Thu Chi — $filename');
-      return file.path;
     }
+    final file = File('${dir.path}/$filename');
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
   }
 }
 

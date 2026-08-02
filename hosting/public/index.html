@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Chính sách quyền riêng tư cho ứng dụng Sổ Thu Chi.">
+<title>Chính sách quyền riêng tư — Sổ Thu Chi</title>
+<style>
+  :root {
+    --bg: #F6F8FA;
+    --surface: #FFFFFF;
+    --text: #1B2430;
+    --text-muted: #55606E;
+    --accent: #1565C0;
+    --accent-2: #00897B;
+    --border: #E1E7ED;
+    --table-head: #EEF3F8;
+    --chip-bg: #E9F1FC;
+    --shadow: 0 1px 2px rgba(20, 30, 45, 0.04), 0 8px 24px rgba(20, 30, 45, 0.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B121C;
+    --surface: #121B28;
+    --text: #E7ECF2;
+    --text-muted: #9BAAB8;
+    --accent: #5B9DEE;
+    --accent-2: #4FD9C4;
+    --border: #223244;
+    --table-head: #17222F;
+    --chip-bg: #16283C;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0B121C;
+      --surface: #121B28;
+      --text: #E7ECF2;
+      --text-muted: #9BAAB8;
+      --accent: #5B9DEE;
+      --accent-2: #4FD9C4;
+      --border: #223244;
+      --table-head: #17222F;
+      --chip-bg: #16283C;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent); color: #fff; }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+  }
+  .brand-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    flex: none;
+  }
+  .eff-date {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: var(--chip-bg);
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+  }
+
+  .doc-title {
+    font-size: clamp(1.7rem, 4vw, 2.15rem);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 8px 0 6px;
+  }
+  .doc-sub {
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    margin: 0 0 32px;
+    max-width: 60ch;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 36px;
+  }
+  .meta-chip {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+  .meta-chip b { color: var(--text); font-weight: 600; }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow);
+  }
+  nav.toc h2 {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 0 0 10px;
+    font-weight: 700;
+  }
+  nav.toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    columns: 2;
+    column-gap: 20px;
+  }
+  nav.toc li { break-inside: avoid; margin-bottom: 6px; }
+  nav.toc a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.88rem;
+    display: block;
+    padding: 3px 0;
+    border-bottom: 1px solid transparent;
+  }
+  nav.toc a:hover { color: var(--accent); }
+
+  section {
+    padding-top: 28px;
+    margin-top: 28px;
+    border-top: 1px solid var(--border);
+    scroll-margin-top: 76px;
+  }
+  section:first-of-type { border-top: none; margin-top: 0; }
+
+  h2 {
+    font-size: 1.15rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 14px;
+  }
+  h2 .num {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    background: var(--chip-bg);
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-weight: 700;
+  }
+
+  p { margin: 0 0 14px; color: var(--text); }
+  strong { font-weight: 650; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin: 4px 0 18px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    min-width: 480px;
+  }
+  thead th {
+    text-align: left;
+    background: var(--table-head);
+    color: var(--text-muted);
+    font-weight: 650;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 10px 14px;
+  }
+  tbody td {
+    padding: 11px 14px;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface) 70%, var(--bg) 30%); }
+
+  ul.plain { margin: 0 0 14px; padding-left: 1.2em; }
+  ul.plain li { margin-bottom: 6px; }
+
+  .callout {
+    background: var(--chip-bg);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    margin: 10px 0 18px;
+  }
+  .callout .label {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  a.contact {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  a.contact:hover { border-bottom-color: var(--accent); }
+
+  footer {
+    max-width: 760px;
+    margin: 8px auto 0;
+    padding: 24px 24px 40px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  @media (max-width: 520px) {
+    nav.toc ol { columns: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="brand-mark"></span> Sổ Thu Chi</div>
+    <span class="eff-date">Hiệu lực: 02/08/2026</span>
+  </div>
+</div>
+
+<main>
+  <h1 class="doc-title">Chính sách quyền riêng tư</h1>
+  <p class="doc-sub">Mô tả chính xác những gì Sổ Thu Chi thu thập, vì sao, và cách bạn kiểm soát nó — khớp với đúng những gì ứng dụng đang làm, không phải một mẫu chính sách chung chung.</p>
+
+  <div class="meta-row">
+    <span class="meta-chip"><b>Ứng dụng:</b> Sổ Thu Chi</span>
+    <span class="meta-chip"><b>Package:</b> com.moneyflow.mobile</span>
+    <span class="meta-chip"><b>Liên hệ:</b> itquanghuy85@gmail.com</span>
+  </div>
+
+  <nav class="toc" aria-label="Mục lục">
+    <h2>Mục lục</h2>
+    <ol>
+      <li><a href="#s1">1. Dữ liệu chúng tôi thu thập</a></li>
+      <li><a href="#s2">2. Quyền truy cập thiết bị</a></li>
+      <li><a href="#s3">3. Nơi lưu trữ &amp; bảo vệ</a></li>
+      <li><a href="#s4">4. Chia sẻ với bên thứ ba</a></li>
+      <li><a href="#s5">5. Dữ liệu trong workspace</a></li>
+      <li><a href="#s6">6. Quyền của bạn</a></li>
+      <li><a href="#s7">7. Trẻ em</a></li>
+      <li><a href="#s8">8. Thay đổi chính sách</a></li>
+      <li><a href="#s9">9. Liên hệ</a></li>
+    </ol>
+  </nav>
+
+  <section id="s1">
+    <h2><span class="num">01</span>Dữ liệu chúng tôi thu thập</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Loại dữ liệu</th><th>Cụ thể</th><th>Bắt buộc?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Tài khoản</td><td>Email, họ tên; số điện thoại (tùy chọn khi đăng ký)</td><td>Có (email/họ tên)</td></tr>
+          <tr><td>Đăng nhập mạng xã hội</td><td>Nếu chọn Google/Apple: email, họ tên cơ bản do Firebase Authentication cung cấp</td><td>Tùy chọn</td></tr>
+          <tr><td>Dữ liệu tài chính do bạn nhập</td><td>Giao dịch thu/chi/chuyển tiền, số dư túi tiền, ngân sách, giao dịch định kỳ, ca làm việc, chốt sổ</td><td>Có — chức năng cốt lõi</td></tr>
+          <tr><td>Dữ liệu khách hàng/công nợ</td><td>Tên, số điện thoại khách hàng bạn tự nhập để theo dõi công nợ</td><td>Tùy chọn</td></tr>
+          <tr><td>Token thiết bị</td><td>Firebase Cloud Messaging token, để gửi thông báo đẩy</td><td>Tự động khi đăng nhập</td></tr>
+          <tr><td>Nhật ký thao tác</td><td>Ai sửa/hủy giao dịch nào, khi nào (minh bạch nội bộ workspace)</td><td>Tự động</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>Chúng tôi KHÔNG thu thập:</strong> vị trí GPS, danh bạ máy, ảnh/camera, lịch sử duyệt web, hay bất kỳ dữ liệu nào để quảng cáo/theo dõi liên ứng dụng. Ứng dụng không tích hợp SDK quảng cáo hay phân tích hành vi (analytics) của bên thứ ba.</p>
+  </section>
+
+  <section id="s2">
+    <h2><span class="num">02</span>Quyền truy cập thiết bị và cách dùng</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Quyền</th><th>Dùng để làm gì</th><th>Rời khỏi máy?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Micro</td><td>Nhập giao dịch bằng giọng nói</td><td><strong>Không</strong> — nhận dạng chạy on-device bằng công cụ của hệ điều hành</td></tr>
+          <tr><td>Vân tay / Face ID</td><td>Khóa ứng dụng bằng sinh trắc học thay vì mã PIN</td><td><strong>Không</strong> — xử lý hoàn toàn bởi hệ điều hành</td></tr>
+          <tr><td>Thông báo</td><td>Báo giao dịch mới, ngân sách vượt hạn mức, nhắc lịch</td><td>Token thiết bị gửi tới Firebase Cloud Messaging (Google)</td></tr>
+          <tr><td>Mạng</td><td>Đồng bộ dữ liệu với máy chủ</td><td>Có — đây là cách ứng dụng hoạt động</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Mã PIN mở khóa ứng dụng được lưu <strong>cục bộ trên máy</strong> (Android Keystore / iOS Keychain) — không gửi lên máy chủ.</p>
+  </section>
+
+  <section id="s3">
+    <h2><span class="num">03</span>Nơi lưu trữ và cách bảo vệ dữ liệu</h2>
+    <ul class="plain">
+      <li>Dữ liệu lưu trong PostgreSQL do <strong>Neon</strong> quản lý, qua máy chủ backend chạy trên <strong>Render</strong>.</li>
+      <li>Mọi kết nối giữa ứng dụng và máy chủ đều qua <strong>HTTPS</strong>.</li>
+      <li>Mật khẩu được băm (hash) bằng bcrypt, không bao giờ lưu dạng thô.</li>
+      <li>Truy cập API yêu cầu token JWT, tự hết hạn và làm mới định kỳ.</li>
+    </ul>
+  </section>
+
+  <section id="s4">
+    <h2><span class="num">04</span>Chia sẻ dữ liệu với bên thứ ba</h2>
+    <p>Chúng tôi <strong>không bán</strong> và <strong>không chia sẻ dữ liệu cho mục đích quảng cáo</strong>. Dữ liệu chỉ đi qua các nhà cung cấp hạ tầng cần thiết để vận hành ứng dụng:</p>
+    <ul class="plain">
+      <li><strong>Google Firebase</strong> — xác thực đăng nhập (Google/Apple sign-in) và gửi thông báo đẩy.</li>
+      <li><strong>Neon</strong> — lưu trữ cơ sở dữ liệu.</li>
+      <li><strong>Render</strong> — chạy máy chủ backend.</li>
+    </ul>
+    <p>Mỗi bên chỉ nhận dữ liệu cần thiết cho đúng chức năng của họ, theo chính sách bảo mật riêng của từng nhà cung cấp.</p>
+  </section>
+
+  <section id="s5">
+    <h2><span class="num">05</span>Dữ liệu trong cùng một workspace</h2>
+    <p>Sổ Thu Chi hoạt động theo mô hình không gian làm việc (workspace) dùng chung: chủ shop mời nhân viên/thành viên gia đình cùng xem hoặc nhập giao dịch. Trong cùng một workspace, các thành viên có thể thấy giao dịch, số dư, và tên người tạo giao dịch của nhau — đây là mục đích cốt lõi của ứng dụng (sổ sách minh bạch, không phải rò rỉ dữ liệu). Chủ workspace (Owner) toàn quyền mời/xóa thành viên.</p>
+  </section>
+
+  <section id="s6">
+    <h2><span class="num">06</span>Quyền của bạn</h2>
+    <p><strong>Xem/sửa dữ liệu:</strong> trực tiếp trong ứng dụng — mọi thay đổi đều lưu vết trong Lịch sử chỉnh sửa.</p>
+    <p><strong>Xóa tài khoản:</strong> vào Cài đặt → Bảo mật → Xóa tài khoản trong ứng dụng để xóa vĩnh viễn tài khoản và toàn bộ dữ liệu liên quan ngay lập tức. Bạn cũng có thể gửi yêu cầu tới <a class="contact" href="mailto:itquanghuy85@gmail.com">itquanghuy85@gmail.com</a>.</p>
+  </section>
+
+  <section id="s7">
+    <h2><span class="num">07</span>Trẻ em</h2>
+    <p>Ứng dụng không hướng đến và không cố ý thu thập dữ liệu từ trẻ em dưới 13 tuổi.</p>
+  </section>
+
+  <section id="s8">
+    <h2><span class="num">08</span>Thay đổi chính sách</h2>
+    <p>Nếu chính sách này thay đổi, ngày hiệu lực ở đầu trang sẽ được cập nhật. Thay đổi quan trọng sẽ được thông báo trong ứng dụng.</p>
+  </section>
+
+  <section id="s9">
+    <h2><span class="num">09</span>Liên hệ</h2>
+    <p>Mọi câu hỏi về quyền riêng tư, gửi email tới <a class="contact" href="mailto:itquanghuy85@gmail.com">itquanghuy85@gmail.com</a>.</p>
+  </section>
+</main>
+
+<footer>Sổ Thu Chi — Chính sách quyền riêng tư · Cập nhật lần cuối 02/08/2026</footer>
+</body>
+</html>

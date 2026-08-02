@@ -71,13 +71,12 @@ quyền mời/xóa thành viên.
 
 - **Xem/sửa dữ liệu**: trực tiếp trong ứng dụng (sửa hồ sơ, sửa/hủy giao
   dịch — mọi thay đổi đều lưu vết trong Lịch sử chỉnh sửa).
-- **Yêu cầu xóa tài khoản/dữ liệu**: hiện tại ứng dụng **chưa có nút tự xóa
-  tài khoản trong app**. Vui lòng gửi yêu cầu tới
-  **itquanghuy85@gmail.com** kèm email đã đăng ký — chúng tôi sẽ xóa toàn
-  bộ dữ liệu liên quan trong vòng 30 ngày.
-  > *Ghi chú cho nhà phát triển: đây là điểm cần bổ sung một nút "Xóa tài
-  > khoản" thực sự trong app trước khi nộp App Store/Play Store — xem
-  > `docs/SUBMISSION_CHECKLIST.md`.*
+- **Xóa tài khoản**: vào **Cài đặt → Bảo mật → Xóa tài khoản** để xóa vĩnh
+  viễn tài khoản và toàn bộ dữ liệu liên quan ngay lập tức. Nếu bạn đang
+  là chủ sở hữu một không gian làm việc có thành viên khác, ứng dụng sẽ
+  yêu cầu chuyển quyền sở hữu hoặc xóa hết thành viên trước, để không xóa
+  nhầm dữ liệu của người khác. Bạn cũng có thể gửi yêu cầu tới
+  **itquanghuy85@gmail.com**.
 
 ## 7. Trẻ em
 

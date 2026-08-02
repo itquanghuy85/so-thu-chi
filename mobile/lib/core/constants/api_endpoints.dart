@@ -29,6 +29,7 @@ class ApiEndpoints {
   static const String refresh = '/auth/refresh';
   static const String me = '/auth/me';
   static const String socialLogin = '/auth/social-login';
+  static const String deleteAccount = '/auth/account';
 
   // Workspaces
   static const String workspaces = '/workspaces';

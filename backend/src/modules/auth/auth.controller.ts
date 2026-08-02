@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -56,5 +56,13 @@ export class AuthController {
       throw new AppException('NOT_FOUND', 'Không tìm thấy người dùng');
     }
     return { id: user.id, email: user.email, full_name: user.fullName, phone: user.phone, locale: user.locale };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('account')
+  @HttpCode(200)
+  async deleteAccount(@CurrentUser() currentUser: JwtUserPayload) {
+    await this.authService.deleteAccount(currentUser.id);
+    return { message: 'Tài khoản đã được xoá' };
   }
 }

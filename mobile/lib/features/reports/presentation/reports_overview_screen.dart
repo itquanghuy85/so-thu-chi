@@ -72,8 +72,8 @@ class ReportsOverviewScreen extends ConsumerWidget {
                   periodLabel: 'Tháng ${DateTime.now().month}-${DateTime.now().year}',
                 );
                 messenger.showSnackBar(SnackBar(
-                  content: Text('Đã tạo file Excel. Chọn "Lưu về máy" hoặc Drive/Zalo trong hộp thoại vừa mở để giữ lại. ($path)'),
-                  duration: const Duration(seconds: 8),
+                  content: Text('Đã lưu file Excel vào $path'),
+                  duration: const Duration(seconds: 5),
                 ));
               } catch (_) {
                 messenger.showSnackBar(const SnackBar(content: Text('Không thể xuất file Excel')));

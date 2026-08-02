@@ -155,6 +155,19 @@ class AuthRepository {
     await _secureStorage.write(key: SecureStorageKeys.refreshToken, value: result.refreshToken);
   }
 
+  /// "Xóa tài khoản" (Cài đặt → Bảo mật). Backend refuses with a `CONFLICT`
+  /// [ApiException] if the account owns a workspace that has other members
+  /// — see `AuthService.deleteAccount`'s doc comment for why. Does not
+  /// clear local tokens itself; the caller (`AuthNotifier.deleteAccount`)
+  /// does that only after the server call succeeds.
+  Future<void> deleteAccount() async {
+    try {
+      await _dio.delete(ApiEndpoints.deleteAccount);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   Future<void> clearTokens() async {
     await _secureStorage.delete(key: SecureStorageKeys.accessToken);
     await _secureStorage.delete(key: SecureStorageKeys.refreshToken);

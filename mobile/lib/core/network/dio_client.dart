@@ -34,9 +34,19 @@ class DioClient {
             // case just makes every screen feel frozen. Once actually
             // connected, a slow mobile connection genuinely transferring
             // data gets more slack.
+            //
+            // receive/send used to be 12s, which is shorter than the free-
+            // tier backend's own documented cold-start time (up to ~50s
+            // after ~15 min idle — see workspace_picker_screen.dart's
+            // "Đang kết nối máy chủ lần đầu..." hint and backend/README.md)
+            // — meaning the very first request after any idle period was
+            // liable to time out client-side before the server even
+            // finished waking up, surfaced as "kết nối máy chủ quá thời
+            // gian" on actions like Khôi phục that happened to be the first
+            // request in a while. 60s gives real margin above that.
             connectTimeout: const Duration(seconds: 8),
-            receiveTimeout: const Duration(seconds: 12),
-            sendTimeout: const Duration(seconds: 12),
+            receiveTimeout: const Duration(seconds: 60),
+            sendTimeout: const Duration(seconds: 60),
             contentType: 'application/json',
           ),
         ) {

@@ -119,10 +119,18 @@ class WorkspaceRepository {
 
   /// "Khôi phục từ file backup" — always creates a brand-new workspace
   /// (never merges into an existing one); returns its id so the caller can
-  /// switch straight into it.
+  /// switch straight into it. Recreates every transaction as its own
+  /// sequential DB write server-side, so this can run well past the
+  /// client's default 60s budget for a workspace with a lot of history —
+  /// give it more room on top of that rather than timing out a restore
+  /// that's still genuinely progressing.
   Future<String> restoreBackup(Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.post(ApiEndpoints.restoreWorkspace, data: payload);
+      final response = await _dio.post(
+        ApiEndpoints.restoreWorkspace,
+        data: payload,
+        options: Options(receiveTimeout: const Duration(minutes: 3), sendTimeout: const Duration(minutes: 3)),
+      );
       return (response.data as Map<String, dynamic>)['id'] as String;
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);

@@ -89,4 +89,26 @@ export class CustomersService {
       created_at: t.createdAt,
     }));
   }
+
+  /// "Xóa khách hàng" — blocked while they still owe (or are owed) money,
+  /// so a balance can't silently disappear; must be settled to 0 first.
+  /// Deletes the customer row before its debt vault (the FK is
+  /// `onDelete: 'RESTRICT'` the other way around — see `Customer.debtVault`)
+  /// — any transaction_entries on that debt vault cascade away with it,
+  /// same trade-off as vault deletion generally.
+  async remove(customerId: string, userId: string) {
+    const customer = await this.customersRepository.findOne({ where: { id: customerId }, relations: { debtVault: true } });
+    if (!customer) {
+      throw new AppException('NOT_FOUND', 'Không tìm thấy khách hàng');
+    }
+    await assertWorkspaceMember(this.dataSource, customer.workspaceId, userId);
+    if ((customer.debtVault?.currentBalance ?? 0) !== 0) {
+      throw new AppException('CONFLICT', 'Khách hàng còn công nợ chưa tất toán — vui lòng thu/trả hết trước khi xoá');
+    }
+    await this.dataSource.transaction(async (manager) => {
+      await manager.delete(Customer, { id: customerId });
+      await manager.delete(Vault, { id: customer.debtVaultId });
+    });
+    return { success: true };
+  }
 }

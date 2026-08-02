@@ -480,39 +480,77 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                 ],
               ),
               const SizedBox(height: 16),
-              if (!transaction.isVoided && !transaction.pending && ref.watch(canEditTransactionsProvider)) ...[
+              if (!transaction.pending && ref.watch(canEditTransactionsProvider)) ...[
+                if (!transaction.isVoided) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Sửa giao dịch'),
+                      onPressed: () async {
+                        final updated = await showEditTransactionSheet(sheetContext, transaction);
+                        if (updated != null) {
+                          ref.read(transactionListProvider.notifier).loadFirstPage();
+                          if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: const Text('Hủy giao dịch'),
+                      onPressed: () async {
+                        final reason = await _promptVoidReason(sheetContext);
+                        if (reason == null) return; // user cancelled
+                        try {
+                          final updated = await ref
+                              .read(transactionRepositoryProvider)
+                              .voidTransaction(transaction.id, reason: reason.isEmpty ? null : reason);
+                          ref.read(transactionListProvider.notifier).replaceTransaction(updated);
+                          if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                        } catch (e) {
+                          final message = e is ApiException ? e.message : 'Không thể hủy giao dịch';
+                          if (sheetContext.mounted) {
+                            ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content: Text(message)));
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Sửa giao dịch'),
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                    icon: const Icon(Icons.delete_forever_outlined),
+                    label: const Text('Xoá vĩnh viễn'),
                     onPressed: () async {
-                      final updated = await showEditTransactionSheet(sheetContext, transaction);
-                      if (updated != null) {
+                      final confirmed = await showDialog<bool>(
+                        context: sheetContext,
+                        builder: (dialogContext) => AlertDialog(
+                          title: const Text('Xoá vĩnh viễn giao dịch?'),
+                          content: const Text('Giao dịch sẽ bị xoá hoàn toàn khỏi lịch sử, không thể khôi phục — khác với "Hủy giao dịch" (vẫn giữ lại dấu vết).'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Huỷ')),
+                            TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(true),
+                              child: const Text('Xoá vĩnh viễn', style: TextStyle(color: AppColors.error)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed != true) return;
+                      try {
+                        await ref.read(transactionRepositoryProvider).deleteTransaction(transaction.id);
                         ref.read(transactionListProvider.notifier).loadFirstPage();
                         if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-                    icon: const Icon(Icons.cancel_outlined),
-                    label: const Text('Hủy giao dịch'),
-                    onPressed: () async {
-                      final reason = await _promptVoidReason(sheetContext);
-                      if (reason == null) return; // user cancelled
-                      try {
-                        final updated = await ref
-                            .read(transactionRepositoryProvider)
-                            .voidTransaction(transaction.id, reason: reason.isEmpty ? null : reason);
-                        ref.read(transactionListProvider.notifier).replaceTransaction(updated);
-                        if (sheetContext.mounted) Navigator.of(sheetContext).pop();
                       } catch (e) {
-                        final message = e is ApiException ? e.message : 'Không thể hủy giao dịch';
+                        final message = e is ApiException ? e.message : 'Không thể xoá giao dịch';
                         if (sheetContext.mounted) {
                           ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content: Text(message)));
                         }

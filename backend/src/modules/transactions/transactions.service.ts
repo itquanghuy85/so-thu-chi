@@ -244,6 +244,48 @@ export class TransactionsService {
     return dto;
   }
 
+  /// "Xóa vĩnh viễn" — unlike `void`, actually removes the row (and its
+  /// entries, cascade) instead of leaving a reversed-but-visible history
+  /// entry. Deliberately a separate action from `void`, not a required
+  /// first step: a `'completed'` transaction gets its vault balances
+  /// reversed here (same math as `void`'s reversal, just applied directly
+  /// instead of via a mirrored entry) before the row disappears; a
+  /// `'voided'` transaction's balance effect is already net zero (the
+  /// original + its reversal entries), so deleting it just removes the
+  /// historical record with no balance math needed. Loses the audit trail
+  /// for this specific transaction going forward — the deletion itself is
+  /// still recorded in the audit log.
+  async remove(transactionId: string, userId: string) {
+    const before = await this.buildResponse(this.dataSource.manager, transactionId).catch(() => null);
+
+    const workspaceId = await this.dataSource.transaction(async (manager) => {
+      const transaction = await manager.findOne(Transaction, { where: { id: transactionId } });
+      if (!transaction) {
+        throw new AppException('NOT_FOUND', 'Không tìm thấy giao dịch');
+      }
+      const role = await assertWorkspaceMember(this.dataSource, transaction.workspaceId, userId);
+      if (role === 'cashier' || role === 'member') {
+        throw new AppException('FORBIDDEN', 'Chỉ chủ sở hữu hoặc quản lý mới có thể xoá giao dịch');
+      }
+
+      if (transaction.status === 'completed') {
+        const entries = await manager.find(TransactionEntry, { where: { transactionId } });
+        for (const entry of entries) {
+          const vault = await manager.findOne(Vault, { where: { id: entry.vaultId } });
+          if (!vault || vault.type === 'virtual') continue;
+          vault.currentBalance += entry.side === 'D' ? -entry.amount : entry.amount;
+          await manager.save(vault);
+        }
+      }
+
+      await manager.delete(Transaction, { id: transactionId });
+      return transaction.workspaceId;
+    });
+
+    await this.auditService.record(workspaceId, userId, 'transaction_delete', 'transaction', transactionId, before, null);
+    return { success: true };
+  }
+
   /// "Sửa giao dịch" (Mục — never mutates the original row): voids the
   /// original transaction (same reversal logic as a manual void, same audit
   /// trail) and creates a brand-new one with the edited values, so the

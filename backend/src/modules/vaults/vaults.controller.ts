@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { VaultsService } from './vaults.service';
 import { CreateVaultDto } from './dto/create-vault.dto';
 import { ReconcileVaultDto } from './dto/reconcile-vault.dto';
@@ -29,5 +29,10 @@ export class VaultsController {
   @Post('vaults/:id/reconcile')
   reconcile(@Param('id') vaultId: string, @CurrentUser() user: JwtUserPayload, @Body() dto: ReconcileVaultDto) {
     return this.vaultsService.reconcile(vaultId, user.id, dto);
+  }
+
+  @Delete('vaults/:id')
+  remove(@Param('id') vaultId: string, @CurrentUser() user: JwtUserPayload) {
+    return this.vaultsService.remove(vaultId, user.id);
   }
 }

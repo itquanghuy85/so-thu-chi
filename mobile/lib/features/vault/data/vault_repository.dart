@@ -79,6 +79,16 @@ class VaultRepository {
       throw ApiException.fromDioException(e);
     }
   }
+
+  /// Blocked server-side (`CONFLICT`) if the vault has ever appeared in a
+  /// transaction — see `VaultsService.remove`'s doc comment.
+  Future<void> deleteVault(String vaultId) async {
+    try {
+      await _dio.delete(ApiEndpoints.deleteVault(vaultId));
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
 }
 
 final vaultRepositoryProvider = Provider<VaultRepository>((ref) {

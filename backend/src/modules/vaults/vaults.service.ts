@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Not, Repository } from 'typeorm';
 import { Vault } from './entities/vault.entity';
+import { TransactionEntry } from '../transactions/entities/transaction-entry.entity';
 import { CreateVaultDto } from './dto/create-vault.dto';
 import { ReconcileVaultDto } from './dto/reconcile-vault.dto';
 import { AppException } from '../../common/exceptions/app.exception';
@@ -58,5 +59,30 @@ export class VaultsService {
       vault: { id: vault.id, name: vault.name, type: vault.type, current_balance: vault.currentBalance },
       difference,
     };
+  }
+
+  /// "Xóa túi tiền" — blocked if it has ever appeared in a transaction
+  /// (deleting it would silently cascade-delete those transaction_entries
+  /// rows too, per `TransactionEntry.vault`'s `onDelete: 'CASCADE'`, leaving
+  /// the transaction itself with a missing leg). Not deletable this way at
+  /// all: the two `'virtual'` bookkeeping vaults every workspace has.
+  async remove(vaultId: string, userId: string) {
+    const vault = await this.vaultsRepository.findOne({ where: { id: vaultId } });
+    if (!vault) {
+      throw new AppException('NOT_FOUND', 'Không tìm thấy quỹ');
+    }
+    await assertWorkspaceMember(this.dataSource, vault.workspaceId, userId);
+    if (vault.type === 'virtual') {
+      throw new AppException('VALIDATION_ERROR', 'Không thể xoá quỹ hệ thống');
+    }
+    const usageCount = await this.dataSource.getRepository(TransactionEntry).count({ where: { vaultId } });
+    if (usageCount > 0) {
+      throw new AppException(
+        'CONFLICT',
+        `Không thể xoá vì túi tiền đã có ${usageCount} giao dịch — hãy đảm bảo không còn giao dịch nào dùng túi này trước`,
+      );
+    }
+    await this.vaultsRepository.delete({ id: vaultId });
+    return { success: true };
   }
 }

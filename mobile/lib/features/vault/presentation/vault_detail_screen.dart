@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/theme/screen_neutrals.dart';
 import '../../../core/theme/section_accents.dart';
 import '../../../core/theme/visual_style_provider.dart';
@@ -12,6 +13,7 @@ import '../../../shared/widgets/section_app_bar.dart';
 import '../../transaction/data/transaction_repository.dart';
 import '../../transaction/domain/transaction.dart';
 import '../../transaction/presentation/transaction_list_screen.dart' show TransactionTile, showTransactionDetailSheet;
+import '../data/vault_repository.dart';
 import '../domain/vault.dart';
 import 'reconcile_sheet.dart';
 import 'vault_list_screen.dart' show vaultTypeIcon;
@@ -35,7 +37,17 @@ class VaultDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: vault.name, style: style),
+      appBar: SectionAppBar(
+        title: vault.name,
+        style: style,
+        actions: [
+          IconButton(
+            tooltip: 'Xoá túi tiền',
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => _deleteVault(context, ref),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(_vaultTransactionsProvider(vault.id)),
         child: ListView(
@@ -119,6 +131,33 @@ class VaultDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _deleteVault(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xoá túi tiền?'),
+        content: Text('Xoá "${vault.name}" vĩnh viễn. Nếu túi này đã từng có giao dịch, thao tác sẽ bị từ chối để không phá vỡ sổ sách.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Huỷ')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Xoá', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(vaultRepositoryProvider).deleteVault(vault.id);
+      ref.invalidate(vaultListProvider);
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (e) {
+      final message = e is ApiException ? e.message : 'Không thể xoá túi tiền';
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 }
 

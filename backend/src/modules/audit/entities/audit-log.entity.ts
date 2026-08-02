@@ -2,7 +2,14 @@ import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, Primary
 import { Workspace } from '../../workspaces/entities/workspace.entity';
 import { User } from '../../users/entities/user.entity';
 
-export type AuditAction = 'transaction_edit' | 'transaction_void' | 'daily_closing';
+export type AuditAction =
+  | 'transaction_edit'
+  | 'transaction_void'
+  | 'transaction_delete'
+  | 'daily_closing'
+  | 'vault_delete'
+  | 'customer_delete'
+  | 'workspace_delete';
 
 /// Append-only audit trail (Mục — "sửa/xóa đều ghi log audit"). Nothing
 /// ever updates or deletes a row here. `beforeData`/`afterData` are plain

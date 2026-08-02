@@ -57,6 +57,16 @@ class CustomerRepository {
       throw ApiException.fromDioException(e);
     }
   }
+
+  /// Blocked server-side (`CONFLICT`) while the customer still has a
+  /// nonzero debt balance — see `CustomersService.remove`'s doc comment.
+  Future<void> deleteCustomer(String customerId) async {
+    try {
+      await _dio.delete(ApiEndpoints.deleteCustomer(customerId));
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
 }
 
 final customerRepositoryProvider = Provider<CustomerRepository>((ref) {

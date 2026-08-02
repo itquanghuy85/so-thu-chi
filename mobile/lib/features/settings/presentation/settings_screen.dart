@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/dark_colors.dart';
 import '../../../core/constants/game_colors.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/theme/screen_neutrals.dart';
 import '../../../core/theme/section_accents.dart';
 import '../../../core/theme/visual_style_provider.dart';
@@ -21,7 +22,9 @@ import '../../recurring/presentation/recurring_list_screen.dart';
 import '../../security/presentation/security_settings_screen.dart';
 import '../../shift/presentation/shift_screen.dart';
 import '../../../shared/widgets/section_app_bar.dart';
+import '../../workspace/data/workspace_repository.dart';
 import '../../workspace/domain/workspace.dart';
+import '../../workspace/presentation/backup_restore_screen.dart';
 import '../../workspace/presentation/member_management_screen.dart';
 
 /// Cài đặt (Mục 12.13). Integrations, notifications, theme switcher and
@@ -163,6 +166,17 @@ class SettingsScreen extends ConsumerWidget {
                 showChevron: true,
                 neutrals: n,
               ),
+              _SettingsTile(
+                icon: Icons.backup_outlined,
+                color: sectionAccent(AppSection.settings, style),
+                title: 'Sao lưu & khôi phục',
+                subtitle: 'Xuất/nhập toàn bộ dữ liệu không gian làm việc',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BackupRestoreScreen()),
+                ),
+                showChevron: true,
+                neutrals: n,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -198,6 +212,16 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Tài khoản',
             neutrals: n,
             children: [
+              if (ref.watch(isWorkspaceOwnerProvider))
+                _SettingsTile(
+                  icon: Icons.delete_forever_outlined,
+                  color: AppColors.error,
+                  title: 'Xoá không gian làm việc',
+                  subtitle: 'Xoá vĩnh viễn toàn bộ dữ liệu — chỉ chủ sở hữu',
+                  titleColor: AppColors.error,
+                  onTap: () => _deleteWorkspace(context, ref),
+                  neutrals: n,
+                ),
               _SettingsTile(
                 icon: Icons.logout,
                 color: AppColors.error,
@@ -221,6 +245,37 @@ class SettingsScreen extends ConsumerWidget {
     await ref.read(workspaceNotifierProvider.notifier).clearSelection();
     // Router redirect (app.dart) sends the user back to the workspace
     // picker once `selected` becomes null.
+  }
+
+  Future<void> _deleteWorkspace(BuildContext context, WidgetRef ref) async {
+    final workspace = ref.read(currentWorkspaceProvider);
+    if (workspace == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xoá không gian làm việc?'),
+        content: Text(
+          'Toàn bộ dữ liệu của "${workspace.name}" (túi tiền, giao dịch, khách hàng, công nợ...) sẽ bị xoá vĩnh viễn cho mọi thành viên, không thể khôi phục trừ khi bạn đã sao lưu trước.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Huỷ')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Xoá vĩnh viễn', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(workspaceRepositoryProvider).deleteWorkspace(workspace.id);
+      await ref.read(workspaceNotifierProvider.notifier).clearSelection();
+      // Router redirect (app.dart) sends the user back to the workspace picker.
+    } catch (e) {
+      final message = e is ApiException ? e.message : 'Không thể xoá không gian làm việc';
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {

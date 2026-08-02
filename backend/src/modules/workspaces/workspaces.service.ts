@@ -17,7 +17,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 
 const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I — easy to read aloud
 
-function generateInviteCode(): string {
+export function generateInviteCode(): string {
   let code = '';
   for (let i = 0; i < 8; i++) {
     code += INVITE_CODE_ALPHABET[Math.floor(Math.random() * INVITE_CODE_ALPHABET.length)];
@@ -227,5 +227,22 @@ export class WorkspacesService {
     member.role = role;
     await this.membersRepository.save(member);
     return { user_id: targetUserId, role: member.role };
+  }
+
+  /// Owner-only: hard-deletes the workspace. Every child entity
+  /// (vaults/categories/transactions/customers/budgets/recurring/shifts/
+  /// daily_closings/audit_logs/achievements) references `workspace_id` with
+  /// `onDelete: 'CASCADE'`, so a single delete here removes all of it —
+  /// there is no separate cleanup step.
+  async remove(workspaceId: string, requesterId: string) {
+    const workspace = await this.workspacesRepository.findOne({ where: { id: workspaceId } });
+    if (!workspace) {
+      throw new AppException('NOT_FOUND', 'Không tìm thấy workspace');
+    }
+    if (workspace.ownerId !== requesterId) {
+      throw new AppException('FORBIDDEN', 'Chỉ chủ sở hữu mới có thể xoá không gian làm việc');
+    }
+    await this.workspacesRepository.delete({ id: workspaceId });
+    return { success: true };
   }
 }

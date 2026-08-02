@@ -94,6 +94,40 @@ class WorkspaceRepository {
       throw ApiException.fromDioException(e);
     }
   }
+
+  /// Owner-only, hard delete (see `WorkspacesService.remove`'s doc comment
+  /// for exactly what cascades away with it).
+  Future<void> deleteWorkspace(String workspaceId) async {
+    try {
+      await _dio.delete(ApiEndpoints.deleteWorkspace(workspaceId));
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// "Sao lưu dữ liệu" — full JSON snapshot of this workspace, meant to be
+  /// written to a file and shared (see `BackupExportService`, mirroring
+  /// `ExcelExportService`'s pattern).
+  Future<Map<String, dynamic>> exportBackup(String workspaceId) async {
+    try {
+      final response = await _dio.get(ApiEndpoints.workspaceBackup(workspaceId));
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// "Khôi phục từ file backup" — always creates a brand-new workspace
+  /// (never merges into an existing one); returns its id so the caller can
+  /// switch straight into it.
+  Future<String> restoreBackup(Map<String, dynamic> payload) async {
+    try {
+      final response = await _dio.post(ApiEndpoints.restoreWorkspace, data: payload);
+      return (response.data as Map<String, dynamic>)['id'] as String;
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
 }
 
 final workspaceRepositoryProvider = Provider<WorkspaceRepository>((ref) {

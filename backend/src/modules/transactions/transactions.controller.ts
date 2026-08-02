@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { EditTransactionDto } from './dto/edit-transaction.dto';
@@ -36,5 +36,10 @@ export class TransactionsController {
   @Patch(':id')
   edit(@Param('id') id: string, @CurrentUser() user: JwtUserPayload, @Body() dto: EditTransactionDto) {
     return this.transactionsService.edit(id, user.id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @CurrentUser() user: JwtUserPayload) {
+    return this.transactionsService.remove(id, user.id);
   }
 }

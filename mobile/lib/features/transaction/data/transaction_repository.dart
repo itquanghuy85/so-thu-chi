@@ -261,6 +261,16 @@ class TransactionRepository {
     );
   }
 
+  /// "Xóa vĩnh viễn": unlike [voidTransaction], actually removes the row —
+  /// see `TransactionsService.remove`'s doc comment for the balance math.
+  Future<void> deleteTransaction(String id) async {
+    try {
+      await _dio.delete(ApiEndpoints.deleteTransaction(id));
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   Future<Transaction> voidTransaction(String id, {String? reason}) async {
     try {
       final response = await _dio.post(

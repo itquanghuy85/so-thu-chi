@@ -38,10 +38,14 @@ class ApiEndpoints {
   static String regenerateInviteCode(String id) => '/workspaces/$id/invite-code';
   static String removeMember(String workspaceId, String userId) => '/workspaces/$workspaceId/members/$userId';
   static String updateMemberRole(String workspaceId, String userId) => '/workspaces/$workspaceId/members/$userId/role';
+  static String deleteWorkspace(String id) => '/workspaces/$id';
+  static String workspaceBackup(String id) => '/workspaces/$id/backup';
+  static const String restoreWorkspace = '/workspaces/restore';
 
   // Vaults
   static String vaults(String workspaceId) => '/workspaces/$workspaceId/vaults';
   static String reconcileVault(String vaultId) => '/vaults/$vaultId/reconcile';
+  static String deleteVault(String vaultId) => '/vaults/$vaultId';
 
   // Categories
   static String categories(String workspaceId) => '/workspaces/$workspaceId/categories';
@@ -51,10 +55,12 @@ class ApiEndpoints {
   static const String transactions = '/transactions';
   static String voidTransaction(String id) => '/transactions/$id/void';
   static String editTransaction(String id) => '/transactions/$id';
+  static String deleteTransaction(String id) => '/transactions/$id';
 
   // Customers
   static String customers(String workspaceId) => '/workspaces/$workspaceId/customers';
   static String customerDebtHistory(String customerId) => '/customers/$customerId/debt-history';
+  static String deleteCustomer(String customerId) => '/customers/$customerId';
 
   // Reports
   static const String cashflowReport = '/reports/cashflow';

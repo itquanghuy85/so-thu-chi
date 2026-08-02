@@ -17,6 +17,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { DailyClosingsModule } from './modules/daily-closings/daily-closings.module';
+import { BackupModule } from './modules/backup/backup.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { DailyClosingsModule } from './modules/daily-closings/daily-closings.mod
     NotificationsModule,
     AuditModule,
     DailyClosingsModule,
+    BackupModule,
   ],
 })
 export class AppModule {}

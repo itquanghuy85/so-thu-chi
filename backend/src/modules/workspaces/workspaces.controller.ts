@@ -59,4 +59,10 @@ export class WorkspacesController {
   ) {
     return this.workspacesService.updateMemberRole(id, userId, user.id, dto.role);
   }
+
+  @UseGuards(WorkspaceMemberGuard)
+  @Delete(':id')
+  remove(@Param('id') id: string, @CurrentUser() user: JwtUserPayload) {
+    return this.workspacesService.remove(id, user.id);
+  }
 }

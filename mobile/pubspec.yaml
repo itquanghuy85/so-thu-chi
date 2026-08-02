@@ -75,6 +75,9 @@ dependencies:
   path_provider: ^2.1.4
   share_plus: ^10.1.2
 
+  # Backup & restore: pick a backup .json file from device storage
+  file_picker: ^8.1.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

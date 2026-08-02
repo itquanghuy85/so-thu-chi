@@ -36,3 +36,10 @@ final canEditTransactionsProvider = Provider<bool>((ref) {
   final role = ref.watch(currentWorkspaceProvider)?.role;
   return role == null || role == 'owner' || role == 'manager';
 });
+
+/// "Xóa không gian làm việc" (Settings) is destructive and irreversible, so
+/// unlike [canEditTransactionsProvider] this defaults to `false` (hidden)
+/// if `role` is ever missing, rather than defaulting to visible.
+final isWorkspaceOwnerProvider = Provider<bool>((ref) {
+  return ref.watch(currentWorkspaceProvider)?.role == 'owner';
+});

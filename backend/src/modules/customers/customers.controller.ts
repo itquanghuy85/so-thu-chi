@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -28,5 +28,10 @@ export class CustomersController {
   @Get('customers/:id/debt-history')
   debtHistory(@Param('id') customerId: string, @CurrentUser() user: JwtUserPayload) {
     return this.customersService.debtHistory(customerId, user.id);
+  }
+
+  @Delete('customers/:id')
+  remove(@Param('id') customerId: string, @CurrentUser() user: JwtUserPayload) {
+    return this.customersService.remove(customerId, user.id);
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/theme/screen_neutrals.dart';
 import '../../../core/theme/section_accents.dart';
 import '../../../core/theme/visual_style_provider.dart';
@@ -31,7 +32,17 @@ class CustomerDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: n.tint(accent),
-      appBar: SectionAppBar(title: customer.name, style: style),
+      appBar: SectionAppBar(
+        title: customer.name,
+        style: style,
+        actions: [
+          IconButton(
+            tooltip: 'Xoá khách hàng',
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => _deleteCustomer(context, ref),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(_debtHistoryProvider(customer.id));
@@ -167,6 +178,33 @@ class CustomerDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _deleteCustomer(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xoá khách hàng?'),
+        content: Text('Xoá "${customer.name}" vĩnh viễn. Nếu khách còn công nợ chưa tất toán, thao tác sẽ bị từ chối.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Huỷ')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Xoá', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(customerRepositoryProvider).deleteCustomer(customer.id);
+      ref.invalidate(customerListProvider);
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (e) {
+      final message = e is ApiException ? e.message : 'Không thể xoá khách hàng';
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 }
 

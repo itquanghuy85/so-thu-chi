@@ -13,6 +13,7 @@ import '../../budget/presentation/budget_management_screen.dart';
 import '../../gamification/data/gamification_repository.dart';
 import '../../transaction/presentation/create_transaction_sheet.dart';
 import '../../transaction/presentation/transaction_display.dart';
+import '../../transaction/presentation/transaction_list_screen.dart' show showTransactionDetailSheet;
 import '../../transaction/domain/transaction.dart';
 import '../../vault/domain/vault.dart';
 import '../../vault/presentation/reconcile_sheet.dart';
@@ -145,7 +146,9 @@ class GameDashboardBody extends ConsumerWidget {
                 child: Text('Chưa có giao dịch nào', style: TextStyle(color: GameColors.textSecondary)),
               )
             else
-              ...data.recentTransactions.map((t) => _GameQuestLogTile(transaction: t)),
+              ...data.recentTransactions.map(
+                (t) => _GameQuestLogTile(transaction: t, onTap: () => showTransactionDetailSheet(context, ref, t)),
+              ),
           ],
         ),
       ),
@@ -390,8 +393,9 @@ class _GameQuickActions extends StatelessWidget {
 
 class _GameQuestLogTile extends StatelessWidget {
   final Transaction transaction;
+  final VoidCallback onTap;
 
-  const _GameQuestLogTile({required this.transaction});
+  const _GameQuestLogTile({required this.transaction, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -407,6 +411,7 @@ class _GameQuestLogTile extends StatelessWidget {
           border: Border(left: BorderSide(color: color, width: 3)),
         ),
         child: ListTile(
+          onTap: onTap,
           dense: true,
           leading: Icon(transactionIcon(transaction.type), color: color, size: 20),
           title: Text(

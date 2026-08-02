@@ -134,7 +134,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       )
                     else
                       ...data.recentTransactions.map(
-                        (t) => TransactionTile(transaction: t, onTap: null),
+                        (t) => TransactionTile(transaction: t, onTap: () => showTransactionDetailSheet(context, ref, t)),
                       ),
                     const SizedBox(height: 24),
                   ],

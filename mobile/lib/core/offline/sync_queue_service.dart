@@ -38,14 +38,19 @@ class SyncQueueService {
         final id = op['id'] as int;
         final endpoint = op['endpoint'] as String;
         final payload = op['payload'];
+        // Marked out of the 'pending' echo *before* the POST fires, not
+        // after it resolves — otherwise a list refresh landing in that
+        // window sees the transaction twice (see markOperationSyncing).
+        await AppDatabase.instance.markOperationSyncing(id);
         try {
           await _dio.post(endpoint, data: _decodePayload(payload));
           await AppDatabase.instance.deleteOperation(id);
         } on DioException catch (e) {
           final apiError = ApiException.fromDioException(e);
           if (apiError.code == 'CONNECTION_ERROR' || apiError.code == 'TIMEOUT') {
-            // Still offline (or server unreachable) — stop, keep the whole
-            // queue intact for the next flush attempt.
+            // Still offline (or server unreachable) — revert to pending and
+            // stop; keep the whole queue intact for the next flush attempt.
+            await AppDatabase.instance.markOperationPending(id);
             break;
           }
           await AppDatabase.instance.markOperationFailed(id, apiError.message);

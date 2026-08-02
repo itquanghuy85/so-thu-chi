@@ -238,6 +238,24 @@ class AppDatabase {
     await db.delete('pending_operations', where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Flips a row out of `status = 'pending'` the moment its POST is actually
+  /// in flight, closing a race that otherwise double-shows a transaction:
+  /// without this, a list refresh that lands *after* the server has
+  /// committed the row but *before* [deleteOperation] runs afterward sees
+  /// both the server's own copy (already in the GET response) and the
+  /// still-`'pending'` local echo of the exact same transaction. Reverted
+  /// back to `'pending'` by [markOperationPending] if the request turns out
+  /// to have failed for connectivity reasons, so it's retried normally.
+  Future<void> markOperationSyncing(int id) async {
+    final db = await database;
+    await db.update('pending_operations', {'status': 'syncing'}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> markOperationPending(int id) async {
+    final db = await database;
+    await db.update('pending_operations', {'status': 'pending'}, where: 'id = ?', whereArgs: [id]);
+  }
+
   /// Marks a queued mutation as rejected by the server — kept in the table
   /// (not deleted) so it surfaces in [getFailedOperations] until the user
   /// explicitly dismisses it via [dismissFailedOperation].

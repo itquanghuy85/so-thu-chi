@@ -312,6 +312,7 @@ export class TransactionsService {
       .getRepository(Transaction)
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.category', 'category')
+      .leftJoinAndSelect('t.createdByUser', 'createdByUser')
       .where('t.workspaceId = :workspaceId', { workspaceId: query.workspace_id })
       .orderBy('t.createdAt', 'DESC');
 
@@ -418,7 +419,7 @@ export class TransactionsService {
   private async buildResponse(manager: EntityManager, transactionId: string) {
     const transaction = await manager.findOne(Transaction, {
       where: { id: transactionId },
-      relations: { category: true },
+      relations: { category: true, createdByUser: true },
     });
     if (!transaction) {
       throw new AppException('NOT_FOUND', 'Không tìm thấy giao dịch');
@@ -475,6 +476,7 @@ export class TransactionsService {
       from_vault: fromEntry?.vault ? { id: fromEntry.vault.id, name: fromEntry.vault.name, type: fromEntry.vault.type } : null,
       to_vault: toEntry?.vault ? { id: toEntry.vault.id, name: toEntry.vault.name, type: toEntry.vault.type } : null,
       customer,
+      created_by: transaction.createdByUser ? { id: transaction.createdByUser.id, name: transaction.createdByUser.fullName } : null,
       created_at: transaction.createdAt,
       entries: entries.map((e) => ({ id: e.id, vault_id: e.vaultId, side: e.side, amount: e.amount })),
     };

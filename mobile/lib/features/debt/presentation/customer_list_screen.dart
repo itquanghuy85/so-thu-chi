@@ -50,12 +50,21 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
             tooltip: 'Xuất Excel',
             icon: const Icon(Icons.file_download_outlined),
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               final customers = customersAsync.valueOrNull;
               if (customers == null || customers.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không có khách hàng để xuất')));
+                messenger.showSnackBar(const SnackBar(content: Text('Không có khách hàng để xuất')));
                 return;
               }
-              await excelExportService.exportCustomers(customers: customers);
+              try {
+                final path = await excelExportService.exportCustomers(customers: customers);
+                messenger.showSnackBar(SnackBar(
+                  content: Text('Đã tạo file Excel. Chọn "Lưu về máy" hoặc Drive/Zalo trong hộp thoại vừa mở để giữ lại. ($path)'),
+                  duration: const Duration(seconds: 8),
+                ));
+              } catch (_) {
+                messenger.showSnackBar(const SnackBar(content: Text('Không thể xuất file Excel')));
+              }
             },
           ),
         ],

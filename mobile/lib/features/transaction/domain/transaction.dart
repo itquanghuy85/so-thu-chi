@@ -56,6 +56,11 @@ class Transaction {
   final TransactionRef? fromVault;
   final TransactionRef? toVault;
   final TransactionRef? customer;
+
+  /// Who recorded this transaction — null only for a still-pending local
+  /// echo (Mục — "cài đặt phân quyền từng người": lets a shared workspace
+  /// see who did what).
+  final TransactionRef? createdBy;
   final DateTime createdAt;
   final String status;
 
@@ -83,6 +88,7 @@ class Transaction {
     this.fromVault,
     this.toVault,
     this.customer,
+    this.createdBy,
     required this.createdAt,
     required this.status,
     this.costAmount,
@@ -109,6 +115,9 @@ class Transaction {
           : null,
       customer: json['customer'] is Map<String, dynamic>
           ? TransactionRef.fromJson(json['customer'] as Map<String, dynamic>)
+          : null,
+      createdBy: json['created_by'] is Map<String, dynamic>
+          ? TransactionRef.fromJson(json['created_by'] as Map<String, dynamic>)
           : null,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now(),
       status: json['status'] as String? ?? 'completed',

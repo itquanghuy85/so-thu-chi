@@ -225,7 +225,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         messenger.showSnackBar(const SnackBar(content: Text('Không có giao dịch để xuất')));
         return;
       }
-      await excelExportService.exportTransactions(transactions: all, periodLabel: filter.period.label);
+      final path = await excelExportService.exportTransactions(transactions: all, periodLabel: filter.period.label);
+      messenger.showSnackBar(SnackBar(
+        content: Text('Đã tạo file Excel. Chọn "Lưu về máy" hoặc Drive/Zalo trong hộp thoại vừa mở để giữ lại. ($path)'),
+        duration: const Duration(seconds: 8),
+      ));
     } catch (e) {
       messenger.hideCurrentSnackBar();
       final message = e is ApiException ? e.message : 'Không thể xuất file Excel';
@@ -283,9 +287,27 @@ class TransactionTile extends ConsumerWidget {
     final pendingColor = transactionColor(TransactionType.transfer, style);
     final profitColor = transactionColor(TransactionType.income, style);
     final lossColor = transactionColor(TransactionType.expense, style);
-    final timeFormat = DateFormat('HH:mm dd/MM', 'vi_VN');
+    final timeFormat = DateFormat('HH:mm dd/MM/yyyy', 'vi_VN');
     final isVoided = transaction.isVoided;
     final profit = transaction.profit;
+
+    // Category/transfer-arrow description, plus the vault it landed in/out
+    // of when that's not already implied (transfer already names both
+    // vaults; debt types fold the note into the description instead).
+    final vaultName = switch (transaction.type) {
+      TransactionType.income => transaction.toVault?.name,
+      TransactionType.expense => transaction.fromVault?.name,
+      _ => null,
+    };
+    final description = transactionDescription(transaction);
+    final descriptionLine = [description, if (vaultName != null && vaultName != description) vaultName]
+        .where((s) => s.isNotEmpty)
+        .join(' • ');
+    final showNoteLine = (transaction.note ?? '').isNotEmpty &&
+        transaction.type != TransactionType.debtIncrease &&
+        transaction.type != TransactionType.debtDecrease;
+    final metaLine = [timeFormat.format(transaction.createdAt), if (transaction.createdBy != null) transaction.createdBy!.name]
+        .join(' • ');
 
     return Opacity(
       opacity: isVoided ? 0.5 : 1,
@@ -320,11 +342,27 @@ class TransactionTile extends ConsumerWidget {
               ],
             ],
           ),
-          subtitle: Text(
-            [transactionDescription(transaction), timeFormat.format(transaction.createdAt)]
-                .where((s) => s.isNotEmpty)
-                .join(' • '),
-            style: TextStyle(color: n.textSecondary),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (descriptionLine.isNotEmpty)
+                Text(descriptionLine, style: TextStyle(color: n.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (showNoteLine)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    transaction.note!,
+                    style: TextStyle(color: n.textSecondary, fontStyle: FontStyle.italic, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(metaLine, style: TextStyle(color: n.textSecondary, fontSize: 11)),
+              ),
+            ],
           ),
           trailing: Column(
             mainAxisSize: MainAxisSize.min,
@@ -389,26 +427,57 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                 ),
               ),
               const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: n.background, borderRadius: BorderRadius.circular(14)),
-                child: Column(
-                  children: [
-                    if (transaction.fromVault != null) _DetailRow(label: 'Từ túi', value: transaction.fromVault!.name, neutrals: n),
-                    if (transaction.toVault != null) _DetailRow(label: 'Đến túi', value: transaction.toVault!.name, neutrals: n),
-                    if (transaction.category != null) _DetailRow(label: 'Danh mục', value: transaction.category!.name, neutrals: n),
-                    if (transaction.costAmount != null) _DetailRow(label: 'Giá vốn hàng bán', value: formatVND(transaction.costAmount!), neutrals: n),
-                    if (transaction.profit != null)
-                      _DetailRow(
-                        label: 'Lợi nhuận',
-                        value: formatVND(transaction.profit!),
-                        neutrals: n,
-                        valueColor: transaction.profit! >= 0 ? AppColors.income : AppColors.error,
-                      ),
-                    if ((transaction.note ?? '').isNotEmpty) _DetailRow(label: 'Ghi chú', value: transaction.note!, neutrals: n),
-                    _DetailRow(label: 'Thời gian', value: dateFormat.format(transaction.createdAt), neutrals: n),
+              Column(
+                children: [
+                  if (transaction.fromVault != null) ...[
+                    _DetailCard(icon: Icons.arrow_upward_rounded, color: AppColors.expense, label: 'Từ túi', value: transaction.fromVault!.name, neutrals: n),
+                    const SizedBox(height: 10),
                   ],
-                ),
+                  if (transaction.toVault != null) ...[
+                    _DetailCard(icon: Icons.arrow_downward_rounded, color: AppColors.income, label: 'Đến túi', value: transaction.toVault!.name, neutrals: n),
+                    const SizedBox(height: 10),
+                  ],
+                  if (transaction.category != null) ...[
+                    _DetailCard(
+                      icon: Icons.category_outlined,
+                      color: AppColors.forKey(transaction.category!.name),
+                      label: 'Danh mục',
+                      value: transaction.category!.name,
+                      neutrals: n,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if (transaction.costAmount != null) ...[
+                    _DetailCard(icon: Icons.point_of_sale_outlined, color: AppColors.transfer, label: 'Giá vốn hàng bán', value: formatVND(transaction.costAmount!), neutrals: n),
+                    const SizedBox(height: 10),
+                  ],
+                  if (transaction.profit != null) ...[
+                    _DetailCard(
+                      icon: transaction.profit! >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                      color: transaction.profit! >= 0 ? AppColors.income : AppColors.error,
+                      label: 'Lợi nhuận',
+                      value: formatVND(transaction.profit!),
+                      neutrals: n,
+                      valueColor: transaction.profit! >= 0 ? AppColors.income : AppColors.error,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if ((transaction.note ?? '').isNotEmpty) ...[
+                    _DetailCard(icon: Icons.sticky_note_2_outlined, color: AppColors.primary, label: 'Ghi chú', value: transaction.note!, neutrals: n),
+                    const SizedBox(height: 10),
+                  ],
+                  _DetailCard(icon: Icons.schedule_outlined, color: AppColors.secondary, label: 'Thời gian', value: dateFormat.format(transaction.createdAt), neutrals: n),
+                  if (transaction.createdBy != null) ...[
+                    const SizedBox(height: 10),
+                    _DetailCard(
+                      icon: Icons.person_outline_rounded,
+                      color: AppColors.forKey(transaction.createdBy!.name),
+                      label: 'Người tạo',
+                      value: transaction.createdBy!.name,
+                      neutrals: n,
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 16),
               if (!transaction.isVoided && !transaction.pending && ref.watch(canEditTransactionsProvider)) ...[
@@ -493,23 +562,47 @@ Future<String?> _promptVoidReason(BuildContext context) {
   );
 }
 
-class _DetailRow extends StatelessWidget {
+/// A single labeled fact in the transaction detail sheet, given its own
+/// color-coded card (icon + tint matching the kind of info it holds — vault
+/// vs category vs note vs creator, ...) instead of a bare text row, so the
+/// sheet reads at a glance instead of as a wall of label/value pairs.
+class _DetailCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
   final String label;
   final String value;
   final ScreenNeutrals neutrals;
   final Color? valueColor;
 
-  const _DetailRow({required this.label, required this.value, required this.neutrals, this.valueColor});
+  const _DetailCard({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+    required this.neutrals,
+    this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: neutrals.cardDecoration(radius: 12, accent: color),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 100, child: Text(label, style: TextStyle(color: neutrals.textSecondary))),
-          Expanded(child: Text(value, style: TextStyle(fontWeight: FontWeight.w500, color: valueColor ?? neutrals.textPrimary))),
+          CircleAvatar(radius: 18, backgroundColor: color.withValues(alpha: 0.14), child: Icon(icon, size: 18, color: color)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: neutrals.textSecondary)),
+                const SizedBox(height: 2),
+                Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: valueColor ?? neutrals.textPrimary)),
+              ],
+            ),
+          ),
         ],
       ),
     );

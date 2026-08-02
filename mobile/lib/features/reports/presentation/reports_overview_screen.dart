@@ -58,17 +58,26 @@ class ReportsOverviewScreen extends ConsumerWidget {
             tooltip: 'Xuất Excel',
             icon: const Icon(Icons.file_download_outlined),
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               final report = monthReportAsync.valueOrNull?.report;
               if (report == null || totalAssets == null || totalDebt == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dữ liệu chưa sẵn sàng, vui lòng thử lại')));
+                messenger.showSnackBar(const SnackBar(content: Text('Dữ liệu chưa sẵn sàng, vui lòng thử lại')));
                 return;
               }
-              await excelExportService.exportSummaryReport(
-                report: report,
-                totalAssets: totalAssets,
-                totalDebt: totalDebt,
-                periodLabel: 'Tháng ${DateTime.now().month}-${DateTime.now().year}',
-              );
+              try {
+                final path = await excelExportService.exportSummaryReport(
+                  report: report,
+                  totalAssets: totalAssets,
+                  totalDebt: totalDebt,
+                  periodLabel: 'Tháng ${DateTime.now().month}-${DateTime.now().year}',
+                );
+                messenger.showSnackBar(SnackBar(
+                  content: Text('Đã tạo file Excel. Chọn "Lưu về máy" hoặc Drive/Zalo trong hộp thoại vừa mở để giữ lại. ($path)'),
+                  duration: const Duration(seconds: 8),
+                ));
+              } catch (_) {
+                messenger.showSnackBar(const SnackBar(content: Text('Không thể xuất file Excel')));
+              }
             },
           ),
         ],

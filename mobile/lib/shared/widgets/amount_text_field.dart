@@ -14,6 +14,7 @@ class AmountTextField extends StatefulWidget {
   final bool required;
   final ValueChanged<String>? onChanged;
   final Widget? suffixIcon;
+  final Color accent;
 
   const AmountTextField({
     super.key,
@@ -22,6 +23,7 @@ class AmountTextField extends StatefulWidget {
     this.required = true,
     this.onChanged,
     this.suffixIcon,
+    this.accent = AppColors.primary,
   });
 
   @override
@@ -65,13 +67,14 @@ class _AmountTextFieldState extends State<AmountTextField> {
         prefixIcon: Container(
           margin: const EdgeInsets.all(10),
           padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.attach_money, color: AppColors.primary, size: 18),
+          decoration: BoxDecoration(color: widget.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+          child: Icon(Icons.attach_money, color: widget.accent, size: 18),
         ),
         suffixText: 'đ',
         suffixIcon: widget.suffixIcon,
         helperText: words.isEmpty ? null : words,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: widget.accent, width: 1.6)),
       ),
     );
   }

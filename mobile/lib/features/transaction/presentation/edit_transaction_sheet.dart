@@ -159,14 +159,19 @@ class _EditTransactionSheetState extends ConsumerState<EditTransactionSheet> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    AmountTextField(controller: _amountController),
+                    AmountTextField(controller: _amountController, accent: transactionColor(_type, ref.watch(visualStyleProvider))),
                     const SizedBox(height: 12),
                     if (_type == TransactionType.income) ...[
                       VaultDropdownField(label: 'Túi nhận tiền', value: _toVaultId, onChanged: (v) => setState(() => _toVaultId = v)),
                       const SizedBox(height: 12),
                       CategoryDropdownField(group: 'income', value: _categoryId, onChanged: (v) => setState(() => _categoryId = v)),
                       const SizedBox(height: 12),
-                      AmountTextField(controller: _costController, label: 'Giá vốn hàng bán (không bắt buộc)', required: false),
+                      AmountTextField(
+                        controller: _costController,
+                        label: 'Giá vốn hàng bán (không bắt buộc)',
+                        required: false,
+                        accent: transactionColor(_type, ref.watch(visualStyleProvider)),
+                      ),
                     ] else if (_type == TransactionType.expense) ...[
                       VaultDropdownField(label: 'Túi chi tiền', value: _vaultId, onChanged: (v) => setState(() => _vaultId = v)),
                       const SizedBox(height: 12),

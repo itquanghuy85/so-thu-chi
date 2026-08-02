@@ -21,7 +21,7 @@ final _dateFormat = DateFormat('HH:mm dd/MM/yyyy', 'vi_VN');
 class ExcelExportService {
   const ExcelExportService();
 
-  Future<void> exportTransactions({
+  Future<String> exportTransactions({
     required List<Transaction> transactions,
     required String periodLabel,
   }) async {
@@ -46,10 +46,10 @@ class ExcelExportService {
       ]);
     }
     _autoFitColumns(sheet, columnCount: 6);
-    await _saveAndShare(excel, 'GiaoDich_${_safeFileSuffix(periodLabel)}.xlsx');
+    return _saveAndShare(excel, 'GiaoDich_${_safeFileSuffix(periodLabel)}.xlsx');
   }
 
-  Future<void> exportCustomers({required List<Customer> customers}) async {
+  Future<String> exportCustomers({required List<Customer> customers}) async {
     final excel = Excel.createExcel();
     final sheet = excel[excel.getDefaultSheet()!];
     sheet.appendRow([
@@ -67,10 +67,10 @@ class ExcelExportService {
       ]);
     }
     _autoFitColumns(sheet, columnCount: 4);
-    await _saveAndShare(excel, 'CongNo_${_safeFileSuffix(DateFormat('dd-MM-yyyy').format(DateTime.now()))}.xlsx');
+    return _saveAndShare(excel, 'CongNo_${_safeFileSuffix(DateFormat('dd-MM-yyyy').format(DateTime.now()))}.xlsx');
   }
 
-  Future<void> exportSummaryReport({
+  Future<String> exportSummaryReport({
     required CashflowReport report,
     required num totalAssets,
     required num totalDebt,
@@ -94,7 +94,7 @@ class ExcelExportService {
       sheet.appendRow([TextCellValue(label), IntCellValue(value.toInt())]);
     }
     _autoFitColumns(sheet, columnCount: 2);
-    await _saveAndShare(excel, 'BaoCao_${_safeFileSuffix(periodLabel)}.xlsx');
+    return _saveAndShare(excel, 'BaoCao_${_safeFileSuffix(periodLabel)}.xlsx');
   }
 
   void _autoFitColumns(Sheet sheet, {required int columnCount}) {
@@ -118,13 +118,35 @@ class ExcelExportService {
     return buffer.toString();
   }
 
-  Future<void> _saveAndShare(Excel excel, String filename) async {
+  /// Prefers the app's own external files directory (Android) —
+  /// `/Android/data/<package>/files/`, browsable with any file manager and
+  /// never cleared by the OS the way a temp/cache dir can be — instead of
+  /// the previous temp directory, whose file only ever existed transiently
+  /// for the share sheet and left the user with nothing findable
+  /// afterward unless they specifically picked "Save"/"Drive" from it.
+  /// Some devices/storage states report that directory as read-only despite
+  /// path_provider handing back a path for it (observed live as a raw
+  /// `IOException: Read-only file system` with no Dart-catchable signal
+  /// beforehand) — falls back to the always-writable temp dir rather than
+  /// the export failing outright. Returns the saved path so the caller can
+  /// tell the user where it landed either way.
+  Future<String> _saveAndShare(Excel excel, String filename) async {
     final bytes = excel.encode();
     if (bytes == null) throw StateError('Không thể tạo file Excel');
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename');
-    await file.writeAsBytes(bytes, flush: true);
-    await Share.shareXFiles([XFile(file.path)], text: 'Sổ Thu Chi — $filename');
+    Directory dir;
+    try {
+      dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/$filename');
+      await file.writeAsBytes(bytes, flush: true);
+      await Share.shareXFiles([XFile(file.path)], text: 'Sổ Thu Chi — $filename');
+      return file.path;
+    } catch (_) {
+      dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$filename');
+      await file.writeAsBytes(bytes, flush: true);
+      await Share.shareXFiles([XFile(file.path)], text: 'Sổ Thu Chi — $filename');
+      return file.path;
+    }
   }
 }
 

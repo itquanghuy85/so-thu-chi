@@ -182,7 +182,7 @@ class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
             onSelected: (c) => setState(() => _customer = c),
           ),
           const SizedBox(height: 12),
-          AmountTextField(controller: _amountController),
+          AmountTextField(controller: _amountController, accent: AppColors.debt),
           FieldSuggestionChips(fieldKey: 'amount_debt_increase', controller: _amountController, accent: AppColors.debt),
           const SizedBox(height: 12),
           TextFormField(
@@ -191,6 +191,7 @@ class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
               labelText: 'Ghi chú mặt hàng',
               hintText: 'Ví dụ: 2 cục gà',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.debt, width: 1.6)),
             ),
             maxLines: 2,
             maxLength: 500,
@@ -273,6 +274,7 @@ class _TraNoFormState extends ConsumerState<_TraNoForm> {
           const SizedBox(height: 12),
           AmountTextField(
             controller: _amountController,
+            accent: AppColors.debt,
             suffixIcon: TextButton(
               onPressed: _customer == null ? null : _fillFullDebt,
               child: const Text('Trả hết'),

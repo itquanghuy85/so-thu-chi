@@ -9,6 +9,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
 import '../../../shared/widgets/field_suggestion_chips.dart';
+import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
 import '../../category/domain/category_icons.dart';
@@ -30,16 +31,16 @@ Future<bool?> showCreateTransactionSheet(BuildContext context, {int initialTabIn
   );
 }
 
-class CreateTransactionSheet extends StatefulWidget {
+class CreateTransactionSheet extends ConsumerStatefulWidget {
   final int initialTabIndex;
 
   const CreateTransactionSheet({super.key, this.initialTabIndex = 0});
 
   @override
-  State<CreateTransactionSheet> createState() => _CreateTransactionSheetState();
+  ConsumerState<CreateTransactionSheet> createState() => _CreateTransactionSheetState();
 }
 
-class _CreateTransactionSheetState extends State<CreateTransactionSheet>
+class _CreateTransactionSheetState extends ConsumerState<CreateTransactionSheet>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
@@ -47,6 +48,10 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this, initialIndex: widget.initialTabIndex);
+    // Repaints the tab bar as the selected (or actively swiped-to) tab
+    // changes, so its color always matches whichever type is showing —
+    // not just a single flat accent for the whole sheet regardless of tab.
+    _tabController.addListener(() => setState(() {}));
   }
 
   @override
@@ -58,6 +63,15 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet>
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
+    final style = ref.watch(visualStyleProvider);
+    final n = neutralsFor(style);
+    final tabColors = [
+      transactionColor(TransactionType.income, style),
+      transactionColor(TransactionType.expense, style),
+      transactionColor(TransactionType.transfer, style),
+      transactionColor(TransactionType.debtIncrease, style),
+    ];
+    final currentAccent = tabColors[_tabController.index];
     return Padding(
       padding: EdgeInsets.only(bottom: mediaQuery.viewInsets.bottom),
       child: SizedBox(
@@ -65,22 +79,15 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet>
         child: Column(
           children: [
             const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+            const SheetDragHandle(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Thêm giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  Text('Thêm giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: n.textPrimary)),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(Icons.close, color: n.textSecondary),
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ],
@@ -88,8 +95,9 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet>
             ),
             TabBar(
               controller: _tabController,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textSecondary,
+              labelColor: currentAccent,
+              unselectedLabelColor: n.textSecondary,
+              indicatorColor: currentAccent,
               isScrollable: true,
               tabAlignment: TabAlignment.center,
               tabs: const [
@@ -99,7 +107,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet>
                 Tab(icon: Icon(Icons.person_outline, size: 16), text: 'Công nợ'),
               ],
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: n.divider),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -328,6 +336,7 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = transactionColor(TransactionType.income, ref.watch(visualStyleProvider));
     return Form(
       key: _formKey,
       child: ListView(
@@ -345,13 +354,14 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
             onChanged: (v) => setState(() => _categoryId = v),
           ),
           const SizedBox(height: 12),
-          AmountTextField(controller: _amountController),
-          FieldSuggestionChips(fieldKey: 'amount_income', controller: _amountController, accent: AppColors.income),
+          AmountTextField(controller: _amountController, accent: accent),
+          FieldSuggestionChips(fieldKey: 'amount_income', controller: _amountController, accent: accent),
           const SizedBox(height: 12),
           AmountTextField(
             controller: _costController,
             label: 'Giá vốn hàng bán (không bắt buộc)',
             required: false,
+            accent: accent,
             suffixIcon: Tooltip(
               message: 'Để trống nếu chưa muốn tính lợi nhuận theo đơn này.\nNhập vào để hệ thống tự tính Lợi nhuận = Thu − Vốn trong báo cáo.',
               child: const Icon(Icons.info_outline, size: 20),
@@ -364,17 +374,18 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
               labelText: 'Ghi chú',
               hintText: 'Nhập ghi chú (không bắt buộc)',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accent, width: 1.6)),
               counterText: null,
             ),
             maxLines: 2,
             maxLength: 500,
             validator: validateNote,
           ),
-          FieldSuggestionChips(fieldKey: 'note_income', controller: _noteController, accent: AppColors.income),
+          FieldSuggestionChips(fieldKey: 'note_income', controller: _noteController, accent: accent),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _isSaving ? null : _submit,
-            style: FilledButton.styleFrom(backgroundColor: AppColors.income),
+            style: FilledButton.styleFrom(backgroundColor: accent),
             child: _isSaving
                 ? const SizedBox(
                     height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -433,6 +444,7 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
 
   @override
   Widget build(BuildContext context) {
+    final accent = transactionColor(TransactionType.expense, ref.watch(visualStyleProvider));
     return Form(
       key: _formKey,
       child: ListView(
@@ -450,8 +462,8 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
             onChanged: (v) => setState(() => _categoryId = v),
           ),
           const SizedBox(height: 12),
-          AmountTextField(controller: _amountController),
-          FieldSuggestionChips(fieldKey: 'amount_expense', controller: _amountController, accent: AppColors.expense),
+          AmountTextField(controller: _amountController, accent: accent),
+          FieldSuggestionChips(fieldKey: 'amount_expense', controller: _amountController, accent: accent),
           const SizedBox(height: 12),
           TextFormField(
             controller: _noteController,
@@ -459,17 +471,18 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
               labelText: 'Ghi chú',
               hintText: 'Nhập ghi chú (không bắt buộc)',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accent, width: 1.6)),
               counterText: null,
             ),
             maxLines: 2,
             maxLength: 500,
             validator: validateNote,
           ),
-          FieldSuggestionChips(fieldKey: 'note_expense', controller: _noteController, accent: AppColors.expense),
+          FieldSuggestionChips(fieldKey: 'note_expense', controller: _noteController, accent: accent),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _isSaving ? null : _submit,
-            style: FilledButton.styleFrom(backgroundColor: AppColors.expense),
+            style: FilledButton.styleFrom(backgroundColor: accent),
             child: _isSaving
                 ? const SizedBox(
                     height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -532,6 +545,7 @@ class _TransferTransactionFormState extends ConsumerState<TransferTransactionFor
 
   @override
   Widget build(BuildContext context) {
+    final accent = transactionColor(TransactionType.transfer, ref.watch(visualStyleProvider));
     return Form(
       key: _formKey,
       child: ListView(
@@ -550,20 +564,24 @@ class _TransferTransactionFormState extends ConsumerState<TransferTransactionFor
             onChanged: (v) => setState(() => _toVaultId = v),
           ),
           const SizedBox(height: 12),
-          AmountTextField(controller: _amountController),
+          AmountTextField(controller: _amountController, accent: accent),
           const SizedBox(height: 12),
           TextFormField(
             controller: _noteController,
-            decoration: InputDecoration(labelText: 'Lý do (tuỳ chọn)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+            decoration: InputDecoration(
+              labelText: 'Lý do (tuỳ chọn)',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accent, width: 1.6)),
+            ),
             maxLines: 2,
             maxLength: 500,
             validator: validateNote,
           ),
-          FieldSuggestionChips(fieldKey: 'note_transfer', controller: _noteController, accent: AppColors.transfer),
+          FieldSuggestionChips(fieldKey: 'note_transfer', controller: _noteController, accent: accent),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _isSaving ? null : _submit,
-            style: FilledButton.styleFrom(backgroundColor: AppColors.transfer),
+            style: FilledButton.styleFrom(backgroundColor: accent),
             child: _isSaving
                 ? const SizedBox(
                     height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))

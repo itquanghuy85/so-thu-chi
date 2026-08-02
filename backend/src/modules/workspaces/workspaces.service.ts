@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Workspace } from './entities/workspace.entity';
 import { WorkspaceMember } from './entities/workspace-member.entity';
 import { Vault } from '../vaults/entities/vault.entity';
@@ -34,8 +34,28 @@ export class WorkspacesService {
     private readonly gamificationService: GamificationService,
   ) {}
 
+  /// Hit on every cold start / workspace-picker visit, so this is one of
+  /// the more latency-sensitive endpoints — was a strict 1+2N query loop
+  /// (one findOne + one count per membership, sequential, not even
+  /// parallelized) for a user's N workspaces; now a flat 3 queries
+  /// regardless of N.
   async listForUser(userId: string) {
     const memberships = await this.membersRepository.find({ where: { userId } });
+    if (memberships.length === 0) return [];
+
+    const workspaceIds = memberships.map((m) => m.workspaceId);
+    const workspaces = await this.workspacesRepository.find({ where: { id: In(workspaceIds) } });
+    const workspaceById = new Map(workspaces.map((w) => [w.id, w]));
+
+    const counts = await this.membersRepository
+      .createQueryBuilder('m')
+      .select('m.workspace_id', 'workspaceId')
+      .addSelect('COUNT(*)', 'count')
+      .where('m.workspace_id IN (:...ids)', { ids: workspaceIds })
+      .groupBy('m.workspace_id')
+      .getRawMany<{ workspaceId: string; count: string }>();
+    const memberCountByWorkspace = new Map(counts.map((c) => [c.workspaceId, Number(c.count)]));
+
     const results: {
       id: string;
       name: string;
@@ -45,15 +65,14 @@ export class WorkspacesService {
       role: WorkspaceMember['role'];
     }[] = [];
     for (const membership of memberships) {
-      const workspace = await this.workspacesRepository.findOne({ where: { id: membership.workspaceId } });
+      const workspace = workspaceById.get(membership.workspaceId);
       if (!workspace) continue;
-      const memberCount = await this.membersRepository.count({ where: { workspaceId: workspace.id } });
       results.push({
         id: workspace.id,
         name: workspace.name,
         type: workspace.type,
         owner_id: workspace.ownerId,
-        member_count: memberCount,
+        member_count: memberCountByWorkspace.get(workspace.id) ?? 0,
         role: membership.role,
       });
     }

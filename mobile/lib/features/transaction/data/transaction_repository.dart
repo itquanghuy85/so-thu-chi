@@ -13,8 +13,9 @@ import '../domain/transaction.dart';
 class TransactionRepository {
   final Dio _dio;
   final SyncQueueService _syncQueueService;
+  final Ref _ref;
 
-  TransactionRepository(this._dio, this._syncQueueService);
+  TransactionRepository(this._dio, this._syncQueueService, this._ref);
 
   Future<TransactionPage> getTransactions({
     required String workspaceId,
@@ -69,14 +70,7 @@ class TransactionRepository {
     required int pageNumber,
   }) async {
     if (pageNumber != 1) return page;
-    final ops = await AppDatabase.instance.getPendingOperations(workspaceId: workspaceId);
-    final pendingTransactions = ops
-        .where((op) => op['kind'] == 'create_transaction')
-        .map((op) => _pendingTransactionFromOp(op))
-        .where((t) => type == null || transactionTypeToString(t.type) == type)
-        .toList()
-        .reversed // newest queued first
-        .toList();
+    final pendingTransactions = await getPendingEcho(workspaceId: workspaceId, type: type);
     if (pendingTransactions.isEmpty) return page;
     return TransactionPage(
       data: [...pendingTransactions, ...page.data],
@@ -85,17 +79,38 @@ class TransactionRepository {
     );
   }
 
+  /// The same locally-queued (not-yet-synced) transactions [_withPendingEcho]
+  /// merges into a `GET /transactions` response, exposed directly so a list
+  /// screen can render a just-created transaction the instant it's queued —
+  /// a local SQLite read takes a few ms — instead of only seeing it once the
+  /// full network round trip above resolves, which can take tens of seconds
+  /// against a cold backend even though the response would include it anyway.
+  Future<List<Transaction>> getPendingEcho({required String workspaceId, String? type}) async {
+    final ops = await AppDatabase.instance.getPendingOperations(workspaceId: workspaceId);
+    return ops
+        .where((op) => op['kind'] == 'create_transaction')
+        .map((op) => _pendingTransactionFromOp(op))
+        .where((t) => type == null || transactionTypeToString(t.type) == type)
+        .toList()
+        .reversed // newest queued first
+        .toList();
+  }
+
   Transaction _pendingTransactionFromOp(Map<String, dynamic> op) {
     final payload = op['payload'];
     final body = payload is Map<String, dynamic> ? payload : <String, dynamic>{};
+    final type = transactionTypeFromString(body['type'] as String? ?? 'income');
+    final amount = (body['amount'] as num?) ?? 0;
+    final costAmount = body['cost_amount'] as num?;
     return Transaction(
       id: op['local_ref'] as String,
-      type: transactionTypeFromString(body['type'] as String? ?? 'income'),
-      amount: (body['amount'] as num?) ?? 0,
+      type: type,
+      amount: amount,
       note: body['note'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(op['created_at'] as int),
       status: 'completed',
-      costAmount: body['cost_amount'] as num?,
+      costAmount: costAmount,
+      profit: type == TransactionType.income && costAmount != null ? amount - costAmount : null,
       pending: true,
     );
   }
@@ -222,15 +237,26 @@ class TransactionRepository {
       payload: body,
       localRef: localRef,
     );
-    unawaited(_syncQueueService.flush());
+    // Not just fire-and-forget: the OfflineBanner's pending/failed counts
+    // are read-once FutureProviders, so without this the banner is stuck
+    // showing "still syncing" forever once flush() actually finishes in
+    // the background — nothing else would ever tell it to re-check.
+    unawaited(_syncQueueService.flush().then((_) {
+      _ref.invalidate(pendingSyncCountProvider);
+      _ref.invalidate(failedSyncCountProvider);
+    }));
+    final type = transactionTypeFromString(body['type'] as String? ?? 'income');
+    final amount = (body['amount'] as num?) ?? 0;
+    final costAmount = body['cost_amount'] as num?;
     return Transaction(
       id: localRef,
-      type: transactionTypeFromString(body['type'] as String? ?? 'income'),
-      amount: (body['amount'] as num?) ?? 0,
+      type: type,
+      amount: amount,
       note: body['note'] as String?,
       createdAt: DateTime.now(),
       status: 'completed',
-      costAmount: body['cost_amount'] as num?,
+      costAmount: costAmount,
+      profit: type == TransactionType.income && costAmount != null ? amount - costAmount : null,
       pending: true,
     );
   }
@@ -283,5 +309,5 @@ class TransactionRepository {
 }
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
-  return TransactionRepository(ref.watch(dioProvider), ref.watch(syncQueueServiceProvider));
+  return TransactionRepository(ref.watch(dioProvider), ref.watch(syncQueueServiceProvider), ref);
 });

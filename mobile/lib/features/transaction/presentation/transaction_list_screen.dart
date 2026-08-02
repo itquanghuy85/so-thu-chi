@@ -281,8 +281,11 @@ class TransactionTile extends ConsumerWidget {
     final n = neutralsFor(style);
     final color = transactionColor(transaction.type, style);
     final pendingColor = transactionColor(TransactionType.transfer, style);
+    final profitColor = transactionColor(TransactionType.income, style);
+    final lossColor = transactionColor(TransactionType.expense, style);
     final timeFormat = DateFormat('HH:mm dd/MM', 'vi_VN');
     final isVoided = transaction.isVoided;
+    final profit = transaction.profit;
 
     return Opacity(
       opacity: isVoided ? 0.5 : 1,
@@ -323,9 +326,22 @@ class TransactionTile extends ConsumerWidget {
                 .join(' • '),
             style: TextStyle(color: n.textSecondary),
           ),
-          trailing: Text(
-            '${transactionAmountSign(transaction.type)}${formatVND(transaction.amount)}',
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15),
+          trailing: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${transactionAmountSign(transaction.type)}${formatVND(transaction.amount)}',
+                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              if (profit != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  '${profit >= 0 ? 'Lãi ' : 'Lỗ '}${formatVND(profit.abs())}',
+                  style: TextStyle(color: profit >= 0 ? profitColor : lossColor, fontWeight: FontWeight.w600, fontSize: 11),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -341,12 +357,14 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
   final n = neutralsFor(style);
   showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: n.surface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (sheetContext) {
       final dateFormat = DateFormat('HH:mm, dd/MM/yyyy', 'vi_VN');
       return SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,

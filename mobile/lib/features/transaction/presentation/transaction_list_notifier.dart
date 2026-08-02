@@ -127,10 +127,21 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
 
   Future<void> loadFirstPage() async {
     state = state.copyWith(isLoading: true, clearError: true);
+    final typeFilter = state.filter.type == null ? null : transactionTypeToString(state.filter.type!);
+    // A just-created transaction is already sitting in the local outbox the
+    // instant "Lưu" returns — show it right away via a fast local read
+    // instead of leaving the list showing stale data until the network
+    // fetch below resolves (that response would include the same pending
+    // transaction, but can take a long time against a cold backend).
+    final pending = await _repository.getPendingEcho(workspaceId: _workspaceId, type: typeFilter);
+    if (pending.isNotEmpty) {
+      final pendingIds = pending.map((t) => t.id).toSet();
+      state = state.copyWith(items: [...pending, ...state.items.where((t) => !pendingIds.contains(t.id))]);
+    }
     try {
       final result = await _repository.getTransactions(
         workspaceId: _workspaceId,
-        type: state.filter.type == null ? null : transactionTypeToString(state.filter.type!),
+        type: typeFilter,
         fromDate: state.filter.effectiveFromDate,
         toDate: state.filter.effectiveToDate,
         page: 1,

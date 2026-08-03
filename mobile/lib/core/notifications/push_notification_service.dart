@@ -66,6 +66,8 @@ class PushNotificationService {
 
     FirebaseMessaging.instance.onTokenRefresh.listen((token) => _registerToken(ref, token));
     final token = await FirebaseMessaging.instance.getToken();
+    // ignore: avoid_print
+    print('DEBUG_FCM getToken() returned: ${token == null ? 'null' : '${token.substring(0, 12)}...(${token.length} chars)'}');
     if (token != null) {
       await _registerToken(ref, token);
     }
@@ -74,14 +76,22 @@ class PushNotificationService {
   Future<void> _registerToken(Ref ref, String token) async {
     final secureStorage = ref.read(secureStorageProvider);
     final lastRegistered = await secureStorage.read(key: SecureStorageKeys.fcmToken);
-    if (lastRegistered == token) return;
+    if (lastRegistered == token) {
+      // ignore: avoid_print
+      print('DEBUG_FCM token unchanged since last successful registration, skipping');
+      return;
+    }
     try {
       await ref.read(notificationsRepositoryProvider).registerToken(token);
       await secureStorage.write(key: SecureStorageKeys.fcmToken, value: token);
+      // ignore: avoid_print
+      print('DEBUG_FCM registerToken SUCCEEDED');
     } catch (e) {
       // Best-effort: a failed registration (e.g. offline right after login)
       // just means this device won't get pushes until the next successful
       // attempt — never block app startup over it.
+      // ignore: avoid_print
+      print('DEBUG_FCM registerToken FAILED: $e');
       debugPrint('FCM token registration failed: $e');
     }
   }

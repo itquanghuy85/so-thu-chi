@@ -3,6 +3,44 @@
 Thứ tự thực hiện thực tế. Dùng cùng với `docs/STORE_LISTING.md` và
 `docs/PRIVACY_POLICY.md`.
 
+## ⚠️ BẮT BUỘC LÀM NGAY — đổi tên gói (03/08/2026)
+
+Tên gói vừa đổi từ `com.moneyflow.mobile` sang **`com.huluca.sochitieu`**
+(vì tên cũ đã bị trùng trên Play Store). Mọi chỗ tự sửa được trong code đã
+sửa xong (Android `applicationId`/`namespace`, thư mục Kotlin, MethodChannel,
+iOS `PRODUCT_BUNDLE_IDENTIFIER`, tài liệu). Nhưng có 3 việc **chỉ làm được
+qua Firebase Console / Apple Developer Portal**, không thể tự động hoá —
+**app Android sẽ không build được cho tới khi làm bước 1**:
+
+1. **Firebase Console → sothuchi-d055a → Project settings → thêm app
+   Android mới**:
+   - Package name: `com.huluca.sochitieu`
+   - Đăng ký lại SHA-1/SHA-256 của cả debug keystore (máy dev) lẫn
+     `release.jks` (đã ký release trước đó) — nếu không, Google Sign-In sẽ
+     báo `DEVELOPER_ERROR`.
+   - Tải file `google-services.json` mới, **ghi đè**
+     `mobile/android/app/google-services.json`.
+   - Có thể xoá app Android cũ (`com.moneyflow.mobile`) trong Firebase nếu
+     muốn dọn dẹp — không bắt buộc, để đó cũng không sao.
+2. **Firebase Console → thêm app iOS mới**:
+   - Bundle ID: `com.huluca.sochitieu`
+   - Tải file `GoogleService-Info.plist` mới, ghi đè
+     `mobile/ios/Runner/GoogleService-Info.plist`.
+3. **Apple Developer Portal → Certificates, Identifiers & Profiles →
+   Identifiers**: tạo **App ID mới** `com.huluca.sochitieu`, bật lại
+   capability **Push Notifications** (và **Sign In with Apple** nếu dùng).
+   Tin vui: APNs Auth Key hiện có (`KEY APNs`, Team-scoped) áp dụng cho
+   *mọi* App ID trong cùng Team, không cần tạo/upload lại key mới. Trong
+   Xcode, đổi Bundle Identifier ở tab Signing & Capabilities, để
+   "Automatically manage signing" tự tạo provisioning profile mới.
+
+**Sau khi có 2 file mới (`google-services.json` + `GoogleService-Info.plist`),
+gửi nội dung cho Claude** (dán trực tiếp hoặc để file vào đúng chỗ rồi báo) —
+cần cập nhật lại `mobile/lib/firebase_options.dart` (các giá trị `appId`,
+`apiKey`, `iosClientId` đổi theo app mới, `messagingSenderId`/`projectId`
+giữ nguyên vì đây vẫn là project Firebase cũ) thì Google/Apple Sign-In và
+avatar upload mới hoạt động lại đúng.
+
 ## 0. ✅ Đã xong (không cần làm lại)
 
 - [x] **Nút "Xóa tài khoản" trong app** — Cài đặt → Bảo mật → Xoá tài
@@ -68,7 +106,7 @@ nhận ký đúng bằng `release.jks`.
 
 - [ ] Tạo tài khoản Google Play Developer (phí một lần **25 USD**) tại
   play.google.com/console.
-- [ ] Tạo app mới, package name `com.moneyflow.mobile`.
+- [ ] Tạo app mới, package name `com.huluca.sochitieu`.
 - [ ] **Store listing**: dán nội dung từ `docs/STORE_LISTING.md`, upload
   icon + ảnh chụp màn hình.
 - [ ] **Content rating questionnaire**: trả lời theo mục "Phân loại nội
@@ -99,7 +137,7 @@ Claude chạy trên Chrome:
   Signing Team, thêm capability "Sign in with Apple" nếu muốn dùng, bật
   Apple provider trong Firebase Console).
 - [ ] Tạo app record trong **App Store Connect**, Bundle ID
-  `com.moneyflow.mobile` (phải khớp chính xác).
+  `com.huluca.sochitieu` (phải khớp chính xác).
 - [ ] Build & upload:
   ```bash
   flutter build ipa --release

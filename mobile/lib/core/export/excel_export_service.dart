@@ -16,7 +16,7 @@ final _dateFormat = DateFormat('HH:mm dd/MM/yyyy', 'vi_VN');
 /// Matches `MainActivity.kt`'s `saveToDownloads` — saves into the public
 /// "Tải xuống" folder via MediaStore so the file is actually findable in
 /// any file manager, instead of the app-private directory used previously.
-const _downloadsChannel = MethodChannel('com.moneyflow.mobile/downloads');
+const _downloadsChannel = MethodChannel('com.huluca.sochitieu/downloads');
 const _xlsxMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /// Generates a `.xlsx` workbook for one of the app's exportable datasets

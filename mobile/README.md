@@ -50,7 +50,7 @@ prepared without a Mac has already been done from this environment:
 
 - **Firebase iOS app already registered** (project `sothuchi-d055a`) and its
   config downloaded to `ios/Runner/GoogleService-Info.plist` (bundle id
-  `com.moneyflow.mobile`, matching the Android app).
+  `com.huluca.sochitieu`, matching the Android app).
 - **`ios/Runner/Info.plist`** already has the Google Sign-In URL scheme
   (`CFBundleURLTypes` → the `REVERSED_CLIENT_ID` from that plist) and the
   usage-description strings iOS requires at runtime for `speech_to_text`
@@ -329,7 +329,7 @@ aren't platform-specific.
 
 ## Google / Apple sign-in (Firebase project `sothuchi-d055a`)
 
-- Firebase project, Android app (`com.moneyflow.mobile`), debug-keystore
+- Firebase project, Android app (`com.huluca.sochitieu`), debug-keystore
   SHA-1/SHA-256, and `android/app/google-services.json` are already set up.
   Google sign-in is enabled in Firebase Authentication and works end-to-end
   on Android.

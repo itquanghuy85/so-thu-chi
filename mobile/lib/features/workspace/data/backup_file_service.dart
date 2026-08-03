@@ -9,7 +9,7 @@ import 'package:share_plus/share_plus.dart';
 /// `core/export/excel_export_service.dart`, reused here for the backup
 /// JSON file instead of an Excel workbook — see that file's doc comment
 /// for why a native call is needed at all instead of just `path_provider`.
-const _downloadsChannel = MethodChannel('com.moneyflow.mobile/downloads');
+const _downloadsChannel = MethodChannel('com.huluca.sochitieu/downloads');
 
 /// Encodes [payload] as pretty JSON, saves it into the public "Tải xuống"
 /// folder (falling back to the app's own external directory if that native

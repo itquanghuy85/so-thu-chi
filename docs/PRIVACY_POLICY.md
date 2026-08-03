@@ -2,7 +2,7 @@
 
 **Ngày hiệu lực:** 03/08/2026
 **Nhà phát triển:** itquanghuy85@gmail.com
-**Ứng dụng:** Sổ Thu Chi (package `com.moneyflow.mobile`)
+**Ứng dụng:** Sổ Thu Chi (package `com.huluca.sochitieu`)
 
 Sổ Thu Chi là ứng dụng quản lý dòng tiền cho chủ shop nhỏ và gia đình. Tài liệu
 này mô tả chính xác những dữ liệu ứng dụng thu thập, vì sao, và cách bạn kiểm

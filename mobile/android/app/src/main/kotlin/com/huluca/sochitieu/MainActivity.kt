@@ -1,4 +1,4 @@
-package com.moneyflow.mobile
+package com.huluca.sochitieu
 
 import android.content.ContentValues
 import android.os.Build
@@ -10,7 +10,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.FileOutputStream
 
-private const val CHANNEL = "com.moneyflow.mobile/downloads"
+private const val CHANNEL = "com.huluca.sochitieu/downloads"
 
 /// FlutterFragmentActivity (not FlutterActivity) is required by local_auth's
 /// biometric prompt (Mục 14 — PIN/Vân tay app lock).

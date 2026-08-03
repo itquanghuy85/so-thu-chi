@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/screen_neutrals.dart';
 import '../../../core/theme/section_accents.dart';
 import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/widgets/section_app_bar.dart';
+
+/// The app's real installed version (`1.2.3`) + build number (`45`), read
+/// from the platform at runtime — never hardcoded, so it can't drift out of
+/// sync with what actually shipped.
+final appPackageInfoProvider = FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());
 
 const _developerName = 'Quang Huy';
 const _phoneDisplay = '0964.09.59.79';
@@ -116,7 +122,17 @@ class AboutScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           Center(
-            child: Text('Sổ Thu Chi • Phiên bản 1.0.0', style: TextStyle(color: n.textSecondary, fontSize: 11)),
+            child: Consumer(
+              builder: (context, ref, _) {
+                final infoAsync = ref.watch(appPackageInfoProvider);
+                final label = infoAsync.when(
+                  data: (info) => 'Sổ Thu Chi • Phiên bản ${info.version} (build ${info.buildNumber})',
+                  loading: () => 'Sổ Thu Chi',
+                  error: (_, _) => 'Sổ Thu Chi',
+                );
+                return Text(label, style: TextStyle(color: n.textSecondary, fontSize: 11));
+              },
+            ),
           ),
         ],
       ),

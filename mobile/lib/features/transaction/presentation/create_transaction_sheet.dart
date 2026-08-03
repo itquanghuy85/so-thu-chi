@@ -27,6 +27,10 @@ Future<bool?> showCreateTransactionSheet(BuildContext context, {int initialTabIn
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    // The sheet paints its own rounded, tinted-header background below
+    // (see CreateTransactionSheet.build) instead of the modal route's flat
+    // default — transparent here so that shows through cleanly.
+    backgroundColor: Colors.transparent,
     builder: (_) => CreateTransactionSheet(initialTabIndex: initialTabIndex),
   );
 }
@@ -60,6 +64,9 @@ class _CreateTransactionSheetState extends ConsumerState<CreateTransactionSheet>
     super.dispose();
   }
 
+  static const _tabIcons = [Icons.arrow_upward, Icons.arrow_downward, Icons.swap_horiz, Icons.person_outline];
+  static const _tabLabels = ['Thu', 'Chi', 'Chuyển tiền', 'Công nợ'];
+
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
@@ -76,50 +83,79 @@ class _CreateTransactionSheetState extends ConsumerState<CreateTransactionSheet>
       padding: EdgeInsets.only(bottom: mediaQuery.viewInsets.bottom),
       child: SizedBox(
         height: mediaQuery.size.height * 0.88,
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            const SheetDragHandle(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Thêm giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: n.textPrimary)),
-                  IconButton(
-                    icon: Icon(Icons.close, color: n.textSecondary),
-                    onPressed: () => Navigator.of(context).maybePop(),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: Container(
+            color: n.surface,
+            child: Column(
+              children: [
+                // Tinted with whichever tab is active — the same "this
+                // section owns this color" wash every screen's Scaffold
+                // uses (n.tint), so the header no longer sits at the exact
+                // same flat color as the sheet body below the divider.
+                Container(
+                  color: n.tint(currentAccent),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      const SheetDragHandle(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Thêm giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: n.textPrimary)),
+                            IconButton(
+                              icon: Icon(Icons.close, color: n.textSecondary),
+                              onPressed: () => Navigator.of(context).maybePop(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TabBar(
+                        controller: _tabController,
+                        labelColor: currentAccent,
+                        unselectedLabelColor: n.textSecondary,
+                        indicatorColor: currentAccent,
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.center,
+                        tabs: List.generate(4, (i) {
+                          return Tab(
+                            height: 56,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: tabColors[i],
+                                  child: Icon(_tabIcons[i], size: 14, color: Colors.white),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(_tabLabels[i], style: const TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            TabBar(
-              controller: _tabController,
-              labelColor: currentAccent,
-              unselectedLabelColor: n.textSecondary,
-              indicatorColor: currentAccent,
-              isScrollable: true,
-              tabAlignment: TabAlignment.center,
-              tabs: const [
-                Tab(icon: Icon(Icons.arrow_upward, size: 16), text: 'Thu'),
-                Tab(icon: Icon(Icons.arrow_downward, size: 16), text: 'Chi'),
-                Tab(icon: Icon(Icons.swap_horiz, size: 16), text: 'Chuyển tiền'),
-                Tab(icon: Icon(Icons.person_outline, size: 16), text: 'Công nợ'),
+                ),
+                Divider(height: 1, color: n.divider),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: const [
+                      IncomeTransactionForm(),
+                      ExpenseTransactionForm(),
+                      TransferTransactionForm(),
+                      DebtTransactionTab(),
+                    ],
+                  ),
+                ),
               ],
             ),
-            Divider(height: 1, color: n.divider),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: const [
-                  IncomeTransactionForm(),
-                  ExpenseTransactionForm(),
-                  TransferTransactionForm(),
-                  DebtTransactionTab(),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -190,7 +226,6 @@ class CategoryDropdownField extends ConsumerWidget {
     final categoriesAsync = ref.watch(group == 'income' ? incomeCategoriesProvider : expenseCategoriesProvider);
     final style = ref.watch(visualStyleProvider);
     final n = neutralsFor(style);
-    final accent = transactionColor(group == 'income' ? TransactionType.income : TransactionType.expense, style);
     return categoriesAsync.when(
       data: (categories) {
         if (categories.isEmpty) return const SizedBox.shrink();
@@ -211,7 +246,12 @@ class CategoryDropdownField extends ConsumerWidget {
               children: categories.map((c) => _CategoryCell(
                     category: c,
                     selected: c.id == value,
-                    accent: accent,
+                    // Each category keeps its own color (keyed by its
+                    // stable icon slug, falling back to its id for
+                    // user-created categories with no icon) — distinct
+                    // per-category color, not one flat income/expense
+                    // accent shared by the whole grid.
+                    color: categoryColorFor(c.icon ?? c.id, style),
                     neutrals: n,
                     onTap: () => onChanged(c.id == value ? null : c.id),
                   )).toList(),
@@ -228,14 +268,14 @@ class CategoryDropdownField extends ConsumerWidget {
 class _CategoryCell extends StatelessWidget {
   final Category category;
   final bool selected;
-  final Color accent;
+  final Color color;
   final ScreenNeutrals neutrals;
   final VoidCallback onTap;
 
   const _CategoryCell({
     required this.category,
     required this.selected,
-    required this.accent,
+    required this.color,
     required this.neutrals,
     required this.onTap,
   });
@@ -248,16 +288,23 @@ class _CategoryCell extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: n.isGame
-            ? n.cardDecoration(radius: 12, accent: selected ? accent : null)
+            ? n.cardDecoration(radius: 12, accent: color)
             : BoxDecoration(
-                color: selected ? accent.withValues(alpha: 0.1) : n.background,
+                color: selected ? color.withValues(alpha: 0.12) : n.background,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: selected ? accent : Colors.transparent, width: 1.5),
+                border: Border.all(color: selected ? color : Colors.transparent, width: 1.5),
               ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(categoryIconFor(category.icon), color: selected ? accent : n.textSecondary, size: 22),
+            CircleAvatar(
+              radius: 14,
+              // Colored badge for every category, selected or not — a
+              // selected one goes solid (icon flips to white) so the state
+              // still reads clearly against its own colorful background.
+              backgroundColor: selected ? color : color.withValues(alpha: 0.16),
+              child: Icon(categoryIconFor(category.icon), color: selected ? Colors.white : color, size: 16),
+            ),
             const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -268,7 +315,7 @@ class _CategoryCell extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10,
-                  color: selected ? accent : n.textPrimary,
+                  color: selected ? color : n.textPrimary,
                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),

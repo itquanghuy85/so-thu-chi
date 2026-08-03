@@ -88,6 +88,10 @@ dependencies:
   # server, không bao giờ gửi/lưu mã PIN dạng thô
   bcrypt: ^1.1.3
 
+  # Reads the app's real installed version/build number (Trang giới thiệu),
+  # instead of a hardcoded string that drifts out of sync with pubspec.yaml
+  package_info_plus: ^8.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

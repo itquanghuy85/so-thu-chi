@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { TransactionEntry, EntrySide } from './entities/transaction-entry.entity';
 import { Vault } from '../vaults/entities/vault.entity';
+import { Shift } from '../shifts/entities/shift.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { ListTransactionsQueryDto } from './dto/list-transactions.query.dto';
@@ -49,6 +50,13 @@ export class TransactionsService {
       const revenueVault = await this.getVirtualVault(manager, dto.workspace_id, VIRTUAL_VAULT_NAMES.REVENUE);
       const expenseVault = await this.getVirtualVault(manager, dto.workspace_id, VIRTUAL_VAULT_NAMES.EXPENSE);
 
+      // Mục — "hiển thị ca làm việc trong giao dịch": tag with whichever
+      // shift this user currently has open in this workspace, if any — see
+      // Transaction.shiftId's doc comment.
+      const openShift = await manager.findOne(Shift, {
+        where: { workspaceId: dto.workspace_id, userId, closedAt: IsNull() },
+      });
+
       const transaction = manager.create(Transaction, {
         workspaceId: dto.workspace_id,
         type: dto.type,
@@ -58,6 +66,7 @@ export class TransactionsService {
         note: dto.note ?? null,
         status: 'completed',
         createdBy: userId,
+        shiftId: openShift?.id ?? null,
       });
       await manager.save(transaction);
 
@@ -355,6 +364,7 @@ export class TransactionsService {
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.category', 'category')
       .leftJoinAndSelect('t.createdByUser', 'createdByUser')
+      .leftJoinAndSelect('t.shift', 'shift')
       .where('t.workspaceId = :workspaceId', { workspaceId: query.workspace_id })
       .orderBy('t.createdAt', 'DESC');
 
@@ -461,7 +471,7 @@ export class TransactionsService {
   private async buildResponse(manager: EntityManager, transactionId: string) {
     const transaction = await manager.findOne(Transaction, {
       where: { id: transactionId },
-      relations: { category: true, createdByUser: true },
+      relations: { category: true, createdByUser: true, shift: true },
     });
     if (!transaction) {
       throw new AppException('NOT_FOUND', 'Không tìm thấy giao dịch');
@@ -519,6 +529,9 @@ export class TransactionsService {
       to_vault: toEntry?.vault ? { id: toEntry.vault.id, name: toEntry.vault.name, type: toEntry.vault.type } : null,
       customer,
       created_by: transaction.createdByUser ? { id: transaction.createdByUser.id, name: transaction.createdByUser.fullName } : null,
+      shift: transaction.shift
+        ? { id: transaction.shift.id, opened_at: transaction.shift.openedAt, closed_at: transaction.shift.closedAt }
+        : null,
       created_at: transaction.createdAt,
       entries: entries.map((e) => ({ id: e.id, vault_id: e.vaultId, side: e.side, amount: e.amount })),
     };

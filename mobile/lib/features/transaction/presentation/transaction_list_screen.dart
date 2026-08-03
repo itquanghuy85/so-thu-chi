@@ -306,8 +306,11 @@ class TransactionTile extends ConsumerWidget {
     final showNoteLine = (transaction.note ?? '').isNotEmpty &&
         transaction.type != TransactionType.debtIncrease &&
         transaction.type != TransactionType.debtDecrease;
-    final metaLine = [timeFormat.format(transaction.createdAt), if (transaction.createdBy != null) transaction.createdBy!.name]
-        .join(' • ');
+    final metaLine = [
+      timeFormat.format(transaction.createdAt),
+      if (transaction.createdBy != null) transaction.createdBy!.name,
+      if (transaction.shiftOpenedAt != null) 'Ca ${DateFormat('HH:mm').format(transaction.shiftOpenedAt!)}',
+    ].join(' • ');
 
     return Opacity(
       opacity: isVoided ? 0.5 : 1,
@@ -467,6 +470,16 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                     const SizedBox(height: 10),
                   ],
                   _DetailCard(icon: Icons.schedule_outlined, color: AppColors.secondary, label: 'Thời gian', value: dateFormat.format(transaction.createdAt), neutrals: n),
+                  if (transaction.shiftOpenedAt != null) ...[
+                    const SizedBox(height: 10),
+                    _DetailCard(
+                      icon: Icons.badge_outlined,
+                      color: AppColors.transfer,
+                      label: 'Ca làm việc',
+                      value: 'Mở lúc ${dateFormat.format(transaction.shiftOpenedAt!)}',
+                      neutrals: n,
+                    ),
+                  ],
                   if (transaction.createdBy != null) ...[
                     const SizedBox(height: 10),
                     _DetailCard(

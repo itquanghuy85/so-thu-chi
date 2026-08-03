@@ -4,6 +4,7 @@ import { Category } from '../../categories/entities/category.entity';
 import { User } from '../../users/entities/user.entity';
 import { bigintTransformer } from '../../../common/utils/bigint.transformer';
 import { TransactionEntry } from './transaction-entry.entity';
+import { Shift } from '../../shifts/entities/shift.entity';
 
 export type TransactionType = 'income' | 'expense' | 'transfer' | 'debt_increase' | 'debt_decrease';
 export type TransactionStatus = 'completed' | 'voided';
@@ -54,6 +55,21 @@ export class Transaction {
   @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'created_by' })
   createdByUser: User;
+
+  // Mục — "hiển thị ca làm việc trong giao dịch": set automatically at
+  // creation time if the creating user has an open shift in this workspace
+  // right then (see TransactionsService.create) — never client-supplied,
+  // and never changed afterward even if the shift later closes. Purely
+  // informational (which shift a transaction happened during); the shift's
+  // own income/expense-during-shift totals are still derived from the time
+  // window, not from this column, so an edited/voided transaction's shift
+  // tag doesn't need to be kept in sync with anything.
+  @Column({ name: 'shift_id', type: 'uuid', nullable: true })
+  shiftId: string | null;
+
+  @ManyToOne(() => Shift, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'shift_id' })
+  shift: Shift | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

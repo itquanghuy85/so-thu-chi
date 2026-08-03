@@ -79,6 +79,12 @@ class Transaction {
   /// badge instead of pretending the write already reached the backend.
   final bool pending;
 
+  /// When this transaction was recorded during an open "Ca làm việc" —
+  /// null if the creator had no shift open at the time. Set once at
+  /// creation and never changed afterward, even after the shift closes —
+  /// see backend `Transaction.shiftId`'s doc comment.
+  final DateTime? shiftOpenedAt;
+
   const Transaction({
     required this.id,
     required this.type,
@@ -94,6 +100,7 @@ class Transaction {
     this.costAmount,
     this.profit,
     this.pending = false,
+    this.shiftOpenedAt,
   });
 
   bool get isVoided => status == 'voided';
@@ -123,6 +130,9 @@ class Transaction {
       status: json['status'] as String? ?? 'completed',
       costAmount: json['cost_amount'] as num?,
       profit: json['profit'] as num?,
+      shiftOpenedAt: json['shift'] is Map<String, dynamic>
+          ? DateTime.tryParse((json['shift'] as Map<String, dynamic>)['opened_at'] as String? ?? '')?.toLocal()
+          : null,
     );
   }
 }

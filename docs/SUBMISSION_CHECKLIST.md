@@ -24,19 +24,29 @@ Thứ tự thực hiện thực tế. Dùng cùng với `docs/STORE_LISTING.md` 
 - [x] **Xuất Excel lưu vào thư mục "Tải xuống"** (public Downloads, qua
   MediaStore) thay vì thư mục riêng của app khó tìm — đã xác nhận file
   thật sự xuất hiện trong `/storage/emulated/0/Download/` trên máy thật.
+- [x] **Backend production luôn theo đúng commit mới nhất** — mọi commit
+  đẩy lên `main` tự động deploy lên Render (đã xác nhận nhiều lần qua
+  phiên làm việc này). Không còn khoảng trễ cần lo.
+- [x] **Chính sách quyền riêng tư đã cập nhật khớp tính năng mới** (ảnh
+  đại diện tải lên Firebase Storage, đồng bộ mã PIN đa thiết bị qua bản
+  băm) — deploy lại `03/08/2026`, xem `docs/PRIVACY_POLICY.md`.
 
 ## 1. Còn thiếu / nên làm trước khi nộp
 
-- [ ] **Deploy backend mới nhất lên Render** — vài commit gần đây (trường
-  `created_by`, endpoint xoá tài khoản) chưa được deploy lên
-  production. Không bắt buộc để nộp app, nhưng nên làm trước để bản nộp
-  có đầy đủ tính năng.
-- [ ] Chuẩn bị 1 tài khoản demo (email/mật khẩu) đã có sẵn vài giao dịch
-  mẫu — cả Google và Apple đều có thể yêu cầu tài khoản test để reviewer
-  đăng nhập thử.
-- [ ] Icon app 512×512 (Play) / 1024×1024 (App Store) — đã có sẵn tại
-  `mobile/assets/icon/icon.png`, kiểm tra độ phân giải đủ trước khi dùng.
-- [ ] Chụp ảnh màn hình theo danh sách trong `docs/STORE_LISTING.md`.
+- [x] **Tài khoản demo cho reviewer** — đã tạo thật trên production, có sẵn
+  workspace + 2 túi tiền + 6 giao dịch mẫu (thu/chi/chuyển/công nợ) để
+  reviewer thấy app không trống rỗng:
+  - Email: `demo.reviewer@sothuchi.app`
+  - Mật khẩu: `Demo@12345`
+  - Dùng đúng 2 giá trị này khi Play Console / App Store Connect hỏi "test
+    account" hoặc điền vào mục **App Review Information** (App Store).
+- [x] **Icon app** — `mobile/assets/icon/icon.png` đã xác nhận đúng
+  1024×1024 (đủ cho App Store trực tiếp). Cho Play Console: mục "App icon"
+  trong Store listing yêu cầu đúng **512×512** — xuất riêng 1 bản resize từ
+  file 1024×1024 này (không upload thẳng bản 1024, Play Console sẽ báo
+  lỗi sai kích thước).
+- [ ] Chụp ảnh màn hình theo danh sách trong `docs/STORE_LISTING.md` — dùng
+  luôn tài khoản demo ở trên để chụp cho có dữ liệu thật thay vì màn trống.
 
 ## 2. Android — Google Play
 

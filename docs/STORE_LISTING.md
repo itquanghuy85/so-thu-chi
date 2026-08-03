@@ -91,8 +91,10 @@ của cả hai store → dự kiến xếp hạng **Mọi lứa tuổi / 4+**.
 
 ## Ảnh chụp màn hình cần chuẩn bị
 
-Chụp trên thiết bị thật hoặc emulator ở các màn hình sau (đã có sẵn trong
-app, không cần dàn dựng):
+Đăng nhập bằng tài khoản demo (xem `SUBMISSION_CHECKLIST.md` mục 1 — đã có
+sẵn giao dịch/túi tiền/công nợ mẫu) để chụp có dữ liệu thật thay vì màn
+trống. Chụp trên thiết bị thật hoặc emulator ở các màn hình sau (đã có sẵn
+trong app, không cần dàn dựng):
 
 1. Tổng quan (Dashboard) — số dư, biểu đồ hôm nay
 2. Danh sách giao dịch với card chi tiết màu sắc
@@ -108,6 +110,48 @@ app, không cần dàn dựng):
 
 ## URL bắt buộc khi nộp
 
-- **Privacy Policy URL:** xem `docs/PRIVACY_POLICY.md` — cần một URL công
-  khai (hướng dẫn trong `docs/SUBMISSION_CHECKLIST.md`).
+- **Privacy Policy URL:** `https://sothuchi-d055a.web.app` (đã public, xem
+  `docs/PRIVACY_POLICY.md` cho bản nguồn Markdown).
 - **Support URL / email:** itquanghuy85@gmail.com
+
+## App Review Information (App Store Connect)
+
+Dán đúng vào mục **App Review Information** khi nộp trên App Store Connect
+— đây là phần reviewer đọc trước khi bấm vào app, không phải nội dung công
+khai cho người dùng cuối:
+
+**Sign-in required:** Yes
+**Demo account:**
+```
+Email: demo.reviewer@sothuchi.app
+Mật khẩu: Demo@12345
+```
+
+**Notes** (dán vào ô "Notes"):
+```
+Tài khoản demo ở trên đã có sẵn 1 không gian làm việc ("Cửa hàng Demo") với
+2 túi tiền, vài giao dịch thu/chi/chuyển mẫu, và 1 khách hàng có công nợ —
+để reviewer thấy ngay dữ liệu thật sau khi đăng nhập, không cần tự tạo gì
+thêm.
+
+Ứng dụng không có mua hàng trong ứng dụng (in-app purchase), không có
+quảng cáo. Tính năng nhập liệu bằng giọng nói dùng công cụ nhận dạng giọng
+nói có sẵn của hệ điều hành (không gọi API bên ngoài) — cần cấp quyền
+micro khi được hỏi để test tính năng này (Dashboard → nút "Nói").
+
+Đăng nhập Google hoạt động bình thường. Nút "Đăng nhập với Apple" có hiển
+thị nhưng sẽ báo "chưa khả dụng" — đây là hành vi có chủ đích (chưa cấu
+hình Sign in with Apple ở phía Firebase), không phải lỗi; vui lòng dùng tài
+khoản demo email/mật khẩu ở trên để test.
+```
+
+## Release notes (What's New — bản nộp đầu tiên)
+
+```
+Phiên bản đầu tiên của Sổ Thu Chi 🎉
+
+Quản lý thu chi, túi tiền, công nợ khách hàng cho chủ shop và gia đình —
+hoạt động cả khi mất mạng, nhập liệu bằng giọng nói, báo cáo trực quan,
+khóa app bằng mã PIN/vân tay, và nhiều tính năng khác. Xem chi tiết ở mô tả
+ứng dụng.
+```

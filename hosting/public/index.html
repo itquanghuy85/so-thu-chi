@@ -275,7 +275,7 @@
 <div class="topbar">
   <div class="topbar-inner">
     <div class="brand"><span class="brand-mark"></span> Sổ Thu Chi</div>
-    <span class="eff-date">Hiệu lực: 02/08/2026</span>
+    <span class="eff-date">Hiệu lực: 03/08/2026</span>
   </div>
 </div>
 
@@ -316,12 +316,13 @@
           <tr><td>Đăng nhập mạng xã hội</td><td>Nếu chọn Google/Apple: email, họ tên cơ bản do Firebase Authentication cung cấp</td><td>Tùy chọn</td></tr>
           <tr><td>Dữ liệu tài chính do bạn nhập</td><td>Giao dịch thu/chi/chuyển tiền, số dư túi tiền, ngân sách, giao dịch định kỳ, ca làm việc, chốt sổ</td><td>Có — chức năng cốt lõi</td></tr>
           <tr><td>Dữ liệu khách hàng/công nợ</td><td>Tên, số điện thoại khách hàng bạn tự nhập để theo dõi công nợ</td><td>Tùy chọn</td></tr>
-          <tr><td>Token thiết bị</td><td>Firebase Cloud Messaging token, để gửi thông báo đẩy</td><td>Tự động khi đăng nhập</td></tr>
+          <tr><td>Ảnh đại diện</td><td>Ảnh bạn chọn từ thư viện ảnh trong máy để làm ảnh đại diện (Trang cá nhân)</td><td>Tùy chọn</td></tr>
+          <tr><td>Token thiết bị</td><td>Firebase Cloud Messaging token, để gửi thông báo đẩy — mỗi thiết bị đăng nhập lưu token riêng</td><td>Tự động khi đăng nhập</td></tr>
           <tr><td>Nhật ký thao tác</td><td>Ai sửa/hủy giao dịch nào, khi nào (minh bạch nội bộ workspace)</td><td>Tự động</td></tr>
         </tbody>
       </table>
     </div>
-    <p><strong>Chúng tôi KHÔNG thu thập:</strong> vị trí GPS, danh bạ máy, ảnh/camera, lịch sử duyệt web, hay bất kỳ dữ liệu nào để quảng cáo/theo dõi liên ứng dụng. Ứng dụng không tích hợp SDK quảng cáo hay phân tích hành vi (analytics) của bên thứ ba.</p>
+    <p><strong>Chúng tôi KHÔNG thu thập:</strong> vị trí GPS, danh bạ máy, ảnh chụp trực tiếp bằng camera (chỉ chọn ảnh có sẵn từ thư viện, ứng dụng không tự chụp), lịch sử duyệt web, hay bất kỳ dữ liệu nào để quảng cáo/theo dõi liên ứng dụng. Ứng dụng không tích hợp SDK quảng cáo hay phân tích hành vi (analytics) của bên thứ ba.</p>
   </section>
 
   <section id="s2">
@@ -332,14 +333,15 @@
           <tr><th>Quyền</th><th>Dùng để làm gì</th><th>Rời khỏi máy?</th></tr>
         </thead>
         <tbody>
-          <tr><td>Micro</td><td>Nhập giao dịch bằng giọng nói</td><td><strong>Không</strong> — nhận dạng chạy on-device bằng công cụ của hệ điều hành</td></tr>
+          <tr><td>Micro</td><td>Nhập giao dịch bằng giọng nói</td><td><strong>Không</strong> — nhận dạng chạy on-device/hệ thống, bản ghi luôn hiện thành form để bạn xác nhận trước khi lưu, không tự động lưu</td></tr>
+          <tr><td>Thư viện ảnh</td><td>Chọn ảnh làm ảnh đại diện (Trang cá nhân)</td><td><strong>Có</strong> — ảnh tải lên Firebase Storage (Google) để hiển thị trên mọi thiết bị đăng nhập; chỉ đọc ảnh bạn chủ động chọn</td></tr>
           <tr><td>Vân tay / Face ID</td><td>Khóa ứng dụng bằng sinh trắc học thay vì mã PIN</td><td><strong>Không</strong> — xử lý hoàn toàn bởi hệ điều hành</td></tr>
           <tr><td>Thông báo</td><td>Báo giao dịch mới, ngân sách vượt hạn mức, nhắc lịch</td><td>Token thiết bị gửi tới Firebase Cloud Messaging (Google)</td></tr>
           <tr><td>Mạng</td><td>Đồng bộ dữ liệu với máy chủ</td><td>Có — đây là cách ứng dụng hoạt động</td></tr>
         </tbody>
       </table>
     </div>
-    <p>Mã PIN mở khóa ứng dụng được lưu <strong>cục bộ trên máy</strong> (Android Keystore / iOS Keychain) — không gửi lên máy chủ.</p>
+    <p>Mã PIN mở khóa ứng dụng được lưu <strong>cục bộ trên máy</strong> (Android Keystore / iOS Keychain). Nếu đăng nhập cùng tài khoản trên nhiều thiết bị, một <strong>bản băm một chiều</strong> của mã PIN — không phải mã gốc — được gửi lên máy chủ để các thiết bị khác nhận diện cùng mã PIN đó (giống cách xử lý mật khẩu đăng nhập). Mã PIN gốc không bao giờ rời khỏi thiết bị nhập nó lần đầu.</p>
   </section>
 
   <section id="s3">
@@ -356,7 +358,7 @@
     <h2><span class="num">04</span>Chia sẻ dữ liệu với bên thứ ba</h2>
     <p>Chúng tôi <strong>không bán</strong> và <strong>không chia sẻ dữ liệu cho mục đích quảng cáo</strong>. Dữ liệu chỉ đi qua các nhà cung cấp hạ tầng cần thiết để vận hành ứng dụng:</p>
     <ul class="plain">
-      <li><strong>Google Firebase</strong> — xác thực đăng nhập (Google/Apple sign-in) và gửi thông báo đẩy.</li>
+      <li><strong>Google Firebase</strong> — xác thực đăng nhập (Google/Apple sign-in), gửi thông báo đẩy, và lưu trữ ảnh đại diện (Firebase Storage, nếu bạn chọn tải ảnh lên).</li>
       <li><strong>Neon</strong> — lưu trữ cơ sở dữ liệu.</li>
       <li><strong>Render</strong> — chạy máy chủ backend.</li>
     </ul>
@@ -390,6 +392,6 @@
   </section>
 </main>
 
-<footer>Sổ Thu Chi — Chính sách quyền riêng tư · Cập nhật lần cuối 02/08/2026</footer>
+<footer>Sổ Thu Chi — Chính sách quyền riêng tư · Cập nhật lần cuối 03/08/2026</footer>
 </body>
 </html>

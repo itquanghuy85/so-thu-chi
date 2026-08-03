@@ -59,6 +59,16 @@ class DioClient {
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          // Lets the backend exclude *this device* (not this account) from
+          // a workspace notification about an action this exact request
+          // caused — see NotificationsService.notifyWorkspace's doc
+          // comment on why that's a device distinction, not a user one
+          // (two devices signed into the same account should each still
+          // hear about the other's actions).
+          final fcmToken = await secureStorage.read(key: SecureStorageKeys.fcmToken);
+          if (fcmToken != null && fcmToken.isNotEmpty) {
+            options.headers['X-Fcm-Token'] = fcmToken;
+          }
           handler.next(options);
         },
         onError: (DioException error, handler) async {

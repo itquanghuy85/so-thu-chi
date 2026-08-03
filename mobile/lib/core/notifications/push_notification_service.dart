@@ -91,10 +91,13 @@ class PushNotificationService {
   /// (rather than a `Ref`) so it can be called from either a `Ref` or a
   /// `WidgetRef` call site — the two don't share a common supertype.
   Future<void> unregister({required NotificationsRepository repository, required FlutterSecureStorage secureStorage}) async {
-    try {
-      await repository.unregisterToken();
-    } catch (_) {
-      // best-effort
+    final token = await secureStorage.read(key: SecureStorageKeys.fcmToken);
+    if (token != null && token.isNotEmpty) {
+      try {
+        await repository.unregisterToken(token);
+      } catch (_) {
+        // best-effort
+      }
     }
     await secureStorage.delete(key: SecureStorageKeys.fcmToken);
   }

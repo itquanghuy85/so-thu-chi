@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, HttpCode, Patch, UseGuards } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -15,8 +15,12 @@ export class NotificationsController {
     return this.notificationsService.registerToken(user.id, dto.token);
   }
 
+  /// Body carries the specific device's token to remove — see
+  /// `NotificationsService.unregisterToken`'s doc comment for why this
+  /// can't just be "the" token for the current user anymore.
   @Delete('fcm-token')
-  unregisterToken(@CurrentUser() user: JwtUserPayload) {
-    return this.notificationsService.unregisterToken(user.id);
+  @HttpCode(200)
+  unregisterToken(@Body() dto: RegisterFcmTokenDto) {
+    return this.notificationsService.unregisterToken(dto.token);
   }
 }

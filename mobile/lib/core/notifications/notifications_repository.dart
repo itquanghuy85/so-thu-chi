@@ -18,9 +18,13 @@ class NotificationsRepository {
     }
   }
 
-  Future<void> unregisterToken() async {
+  /// Removes only this one device's registration — see
+  /// `NotificationsService.unregisterToken`'s doc comment on the backend
+  /// for why it needs the specific token, not just "the" token for the
+  /// signed-in account.
+  Future<void> unregisterToken(String token) async {
     try {
-      await _dio.delete(ApiEndpoints.fcmToken);
+      await _dio.delete(ApiEndpoints.fcmToken, data: {'token': token});
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

@@ -20,10 +20,6 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async setFcmToken(userId: string, token: string | null): Promise<void> {
-    await this.usersRepository.update({ id: userId }, { fcmToken: token });
-  }
-
   async updateProfile(userId: string, data: { fullName?: string; phone?: string }): Promise<User> {
     await this.usersRepository.update({ id: userId }, data);
     return (await this.findById(userId))!;

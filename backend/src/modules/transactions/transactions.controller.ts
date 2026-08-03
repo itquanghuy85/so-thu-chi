@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { WorkspaceMemberGuard } from '../../common/guards/workspace-member.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUserPayload } from '../../common/decorators/current-user.decorator';
+import { DeviceToken } from '../../common/decorators/device-token.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('transactions')
@@ -22,20 +23,20 @@ export class TransactionsController {
 
   @UseGuards(WorkspaceMemberGuard)
   @Post()
-  create(@CurrentUser() user: JwtUserPayload, @Body() dto: CreateTransactionDto) {
-    return this.transactionsService.create(user.id, dto);
+  create(@CurrentUser() user: JwtUserPayload, @Body() dto: CreateTransactionDto, @DeviceToken() deviceToken?: string) {
+    return this.transactionsService.create(user.id, dto, true, deviceToken);
   }
 
   // `:id` here is the transaction id, not the workspace id — membership is
   // checked inside the service after resolving the transaction's workspace.
   @Post(':id/void')
-  void(@Param('id') id: string, @CurrentUser() user: JwtUserPayload, @Body() dto: VoidTransactionDto) {
-    return this.transactionsService.void(id, user.id, dto.reason);
+  void(@Param('id') id: string, @CurrentUser() user: JwtUserPayload, @Body() dto: VoidTransactionDto, @DeviceToken() deviceToken?: string) {
+    return this.transactionsService.void(id, user.id, dto.reason, true, deviceToken);
   }
 
   @Patch(':id')
-  edit(@Param('id') id: string, @CurrentUser() user: JwtUserPayload, @Body() dto: EditTransactionDto) {
-    return this.transactionsService.edit(id, user.id, dto);
+  edit(@Param('id') id: string, @CurrentUser() user: JwtUserPayload, @Body() dto: EditTransactionDto, @DeviceToken() deviceToken?: string) {
+    return this.transactionsService.edit(id, user.id, dto, deviceToken);
   }
 
   @Delete(':id')

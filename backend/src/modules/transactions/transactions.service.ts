@@ -41,7 +41,7 @@ export class TransactionsService {
     private readonly auditService: AuditService,
   ) {}
 
-  async create(userId: string, dto: CreateTransactionDto, notify = true) {
+  async create(userId: string, dto: CreateTransactionDto, notify = true, deviceToken?: string) {
     await assertWorkspaceMember(this.dataSource, dto.workspace_id, userId);
 
     const response = await this.dataSource.transaction(async (manager) => {
@@ -142,7 +142,7 @@ export class TransactionsService {
         await this.notificationsService.notifyWorkspace(dto.workspace_id, {
           title: TRANSACTION_TYPE_LABEL_VI[dto.type] ?? 'Giao dịch mới',
           body: `${formatVndAmount(dto.amount)}đ${dto.note ? ' • ' + dto.note : ''}`,
-          excludeUserId: userId,
+          excludeToken: deviceToken,
           data: { type: 'transaction_created', workspace_id: dto.workspace_id },
         });
         if (dto.type === 'expense') {
@@ -167,7 +167,7 @@ export class TransactionsService {
   /// reversal entries (see `toTransactionDto`'s doc comment), keeping the
   /// full audit trail in the ledger itself. `reason` is optional free text,
   /// recorded only on the audit log entry, not on the transaction row.
-  async void(transactionId: string, userId: string, reason?: string, notify = true) {
+  async void(transactionId: string, userId: string, reason?: string, notify = true, deviceToken?: string) {
     // Read outside the mutating transaction — purely for the audit log's
     // "before" snapshot, so a failure here can never affect the real void.
     const before = await this.buildResponse(this.dataSource.manager, transactionId).catch(() => null);
@@ -233,7 +233,7 @@ export class TransactionsService {
         await this.notificationsService.notifyWorkspace(workspaceId, {
           title: 'Đã hủy giao dịch',
           body: `${formatVndAmount(dto.amount)}đ${before?.note ? ' • ' + before.note : ''}${reason ? ' • Lý do: ' + reason : ''}`,
-          excludeUserId: userId,
+          excludeToken: deviceToken,
           data: { type: 'transaction_voided', workspace_id: workspaceId },
         });
       } catch {
@@ -293,7 +293,7 @@ export class TransactionsService {
   /// overwriting history. Both the void and the create get their own
   /// entries in `transactions`/`transaction_entries` — this is deliberately
   /// two ledger events, not one.
-  async edit(transactionId: string, userId: string, dto: EditTransactionDto) {
+  async edit(transactionId: string, userId: string, dto: EditTransactionDto, deviceToken?: string) {
     const original = await this.dataSource.getRepository(Transaction).findOne({ where: { id: transactionId } });
     if (!original) {
       throw new AppException('NOT_FOUND', 'Không tìm thấy giao dịch');
@@ -334,7 +334,7 @@ export class TransactionsService {
       await this.notificationsService.notifyWorkspace(original.workspaceId, {
         title: 'Đã sửa giao dịch',
         body: `${formatVndAmount(created.amount)}đ${created.note ? ' • ' + created.note : ''}`,
-        excludeUserId: userId,
+        excludeToken: deviceToken,
         data: { type: 'transaction_edited', workspace_id: original.workspaceId },
       });
     } catch {

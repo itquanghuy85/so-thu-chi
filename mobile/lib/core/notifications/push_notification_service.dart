@@ -64,34 +64,77 @@ class PushNotificationService {
       _navigate(ref, initialMessage.data);
     }
 
-    FirebaseMessaging.instance.onTokenRefresh.listen((token) => _registerToken(ref, token));
-    final token = await FirebaseMessaging.instance.getToken();
-    // ignore: avoid_print
-    print('DEBUG_FCM getToken() returned: ${token == null ? 'null' : '${token.substring(0, 12)}...(${token.length} chars)'}');
-    if (token != null) {
-      await _registerToken(ref, token);
+    final repository = ref.read(notificationsRepositoryProvider);
+    final secureStorage = ref.read(secureStorageProvider);
+    FirebaseMessaging.instance.onTokenRefresh.listen(
+      (token) => _registerToken(repository: repository, secureStorage: secureStorage, token: token),
+    );
+    await _fetchAndRegister(repository: repository, secureStorage: secureStorage);
+  }
+
+  /// Re-runs the fetch-token → register-with-backend flow unconditionally
+  /// (bypassing the "unchanged token" skip in [_registerToken]) — used by
+  /// the temporary "Chẩn đoán thông báo" tile in Settings so the outcome
+  /// can be checked on-device. Takes explicit dependencies rather than a
+  /// `Ref`/`WidgetRef` — see [unregister]'s doc comment for why.
+  Future<void> debugForceReRegister({
+    required NotificationsRepository repository,
+    required FlutterSecureStorage secureStorage,
+  }) =>
+      _fetchAndRegister(repository: repository, secureStorage: secureStorage, force: true);
+
+  Future<void> _fetchAndRegister({
+    required NotificationsRepository repository,
+    required FlutterSecureStorage secureStorage,
+    bool force = false,
+  }) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) {
+        await secureStorage.write(
+          key: SecureStorageKeys.fcmDebugStatus,
+          value: 'getToken() trả về null lúc ${DateTime.now()} — thiết bị chưa nhận được token nào từ Firebase/APNs.',
+        );
+        return;
+      }
+      await _registerToken(repository: repository, secureStorage: secureStorage, token: token, force: force);
+    } catch (e) {
+      await secureStorage.write(
+        key: SecureStorageKeys.fcmDebugStatus,
+        value: 'getToken() báo lỗi lúc ${DateTime.now()}: $e',
+      );
     }
   }
 
-  Future<void> _registerToken(Ref ref, String token) async {
-    final secureStorage = ref.read(secureStorageProvider);
+  Future<void> _registerToken({
+    required NotificationsRepository repository,
+    required FlutterSecureStorage secureStorage,
+    required String token,
+    bool force = false,
+  }) async {
     final lastRegistered = await secureStorage.read(key: SecureStorageKeys.fcmToken);
-    if (lastRegistered == token) {
-      // ignore: avoid_print
-      print('DEBUG_FCM token unchanged since last successful registration, skipping');
+    if (!force && lastRegistered == token) {
+      await secureStorage.write(
+        key: SecureStorageKeys.fcmDebugStatus,
+        value: 'OK (không đổi) lúc ${DateTime.now()} — token ...${token.substring(token.length - 8)}',
+      );
       return;
     }
     try {
-      await ref.read(notificationsRepositoryProvider).registerToken(token);
+      await repository.registerToken(token);
       await secureStorage.write(key: SecureStorageKeys.fcmToken, value: token);
-      // ignore: avoid_print
-      print('DEBUG_FCM registerToken SUCCEEDED');
+      await secureStorage.write(
+        key: SecureStorageKeys.fcmDebugStatus,
+        value: 'Đăng ký THÀNH CÔNG lúc ${DateTime.now()} — token ...${token.substring(token.length - 8)}',
+      );
     } catch (e) {
       // Best-effort: a failed registration (e.g. offline right after login)
       // just means this device won't get pushes until the next successful
       // attempt — never block app startup over it.
-      // ignore: avoid_print
-      print('DEBUG_FCM registerToken FAILED: $e');
+      await secureStorage.write(
+        key: SecureStorageKeys.fcmDebugStatus,
+        value: 'Đăng ký THẤT BẠI lúc ${DateTime.now()}: $e',
+      );
       debugPrint('FCM token registration failed: $e');
     }
   }

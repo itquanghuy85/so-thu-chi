@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/dark_colors.dart';
 import '../../../core/constants/game_colors.dart';
+import '../../../core/constants/secure_storage_keys.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/theme/screen_neutrals.dart';
 import '../../../core/theme/section_accents.dart';
@@ -243,6 +244,18 @@ class SettingsScreen extends ConsumerWidget {
                 showChevron: true,
                 neutrals: n,
               ),
+              // Temporary — for diagnosing why iOS push registration isn't
+              // reaching the backend, without needing an Xcode console.
+              // Remove once resolved (see push_notification_service.dart's
+              // `debugForceReRegister`/`SecureStorageKeys.fcmDebugStatus`).
+              _SettingsTile(
+                icon: Icons.bug_report_outlined,
+                color: sectionAccent(AppSection.settings, style),
+                title: 'Chẩn đoán thông báo (tạm thời)',
+                onTap: () => _showFcmDebugDialog(context, ref),
+                showChevron: true,
+                neutrals: n,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -327,6 +340,46 @@ class SettingsScreen extends ConsumerWidget {
     await ref.read(authNotifierProvider.notifier).logout();
     // Router redirect (app.dart) sends the user back to Login.
   }
+}
+
+/// Temporary — shows the last FCM registration outcome straight from
+/// secure storage (see `SecureStorageKeys.fcmDebugStatus`) with a button to
+/// force a fresh attempt, so this can be checked directly on the phone
+/// screen without an Xcode/adb console. Remove once iOS push is confirmed
+/// working.
+Future<void> _showFcmDebugDialog(BuildContext context, WidgetRef ref) async {
+  final secureStorage = ref.read(secureStorageProvider);
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (dialogContext, setState) {
+        return AlertDialog(
+          title: const Text('Chẩn đoán thông báo'),
+          content: FutureBuilder<String?>(
+            future: secureStorage.read(key: SecureStorageKeys.fcmDebugStatus),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox(height: 40, child: Center(child: CircularProgressIndicator()));
+              return Text(snapshot.data ?? 'Chưa có lần thử đăng ký nào được ghi nhận.');
+            },
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Đóng')),
+            TextButton(
+              onPressed: () async {
+                await ref.read(pushNotificationServiceProvider).debugForceReRegister(
+                      repository: ref.read(notificationsRepositoryProvider),
+                      secureStorage: secureStorage,
+                    );
+                setState(() {});
+              },
+              child: const Text('Kiểm tra lại'),
+            ),
+          ],
+        );
+      },
+    ),
+  );
 }
 
 /// Picker between the three app-wide visual skins: Classic, "Game Leon"

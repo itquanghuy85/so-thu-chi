@@ -12,4 +12,10 @@ class SecureStorageKeys {
   static const String visualStyle = 'app_visual_style';
   static const String onboardingSeen = 'onboarding_seen';
   static const String fcmToken = 'fcm_token_registered';
+
+  /// Temporary — human-readable outcome of the last FCM registration
+  /// attempt, shown in Settings so this can be diagnosed on-device without
+  /// needing an Xcode/adb console. Remove once iOS push is confirmed
+  /// working (see settings_screen.dart's "Chẩn đoán thông báo" tile).
+  static const String fcmDebugStatus = 'fcm_debug_status';
 }

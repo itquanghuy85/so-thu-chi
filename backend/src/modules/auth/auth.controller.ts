@@ -8,6 +8,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { SetPinDto } from './dto/set-pin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUserPayload } from '../../common/decorators/current-user.decorator';
@@ -103,6 +104,31 @@ export class AuthController {
     }
     const user = await this.authService.updateAvatar(currentUser.id, file.buffer, file.mimetype);
     return toPublicUser(user);
+  }
+
+  /// "Cài PIN / Vân tay": account-wide, not per-device — see
+  /// `User.pinHash`'s doc comment for why and how offline verification
+  /// still works on a device that hasn't set this PIN itself yet.
+  @UseGuards(JwtAuthGuard)
+  @Get('pin')
+  getPinStatus(@CurrentUser() currentUser: JwtUserPayload) {
+    return this.authService.getPinStatus(currentUser.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('pin')
+  @HttpCode(200)
+  async setPin(@CurrentUser() currentUser: JwtUserPayload, @Body() dto: SetPinDto) {
+    await this.authService.setPin(currentUser.id, dto);
+    return { message: 'Đã đặt mã PIN' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('pin')
+  @HttpCode(200)
+  async clearPin(@CurrentUser() currentUser: JwtUserPayload) {
+    await this.authService.clearPin(currentUser.id);
+    return { message: 'Đã tắt khoá bằng mã PIN' };
   }
 
   @UseGuards(JwtAuthGuard)

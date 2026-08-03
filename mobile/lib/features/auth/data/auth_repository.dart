@@ -38,6 +38,14 @@ class AuthResult {
   }
 }
 
+/// `GET /auth/pin` result — `pinHash` is a bcrypt hash, never the raw PIN.
+class PinStatus {
+  final bool hasPin;
+  final String? pinHash;
+
+  const PinStatus({required this.hasPin, this.pinHash});
+}
+
 class AuthRepository {
   final Dio _dio;
   final FlutterSecureStorage _secureStorage;
@@ -176,6 +184,38 @@ class AuthRepository {
       final json = response.data as Map<String, dynamic>;
       await _cacheUser(json);
       return User.fromJson(json);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// "Cài PIN / Vân tay": pushes the new PIN so the account's other devices
+  /// can pick it up too — see `AppLockService`'s doc comment for how a
+  /// device that hasn't set this PIN locally yet still verifies entries
+  /// offline against the hash this returns via [getPinStatus].
+  Future<void> setPin(String pin) async {
+    try {
+      await _dio.patch(ApiEndpoints.pin, data: {'pin': pin});
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<void> clearPin() async {
+    try {
+      await _dio.delete(ApiEndpoints.pin);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// `pinHash` is never the raw PIN — see `User.pinHash`'s doc comment on
+  /// the backend.
+  Future<PinStatus> getPinStatus() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.pin);
+      final json = response.data as Map<String, dynamic>;
+      return PinStatus(hasPin: json['has_pin'] as bool? ?? false, pinHash: json['pin_hash'] as String?);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

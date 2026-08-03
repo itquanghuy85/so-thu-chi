@@ -16,6 +16,7 @@ import { LoginDto } from './dto/login.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { SetPinDto } from './dto/set-pin.dto';
 
 export interface TokenPair {
   access_token: string;
@@ -159,6 +160,25 @@ export class AuthService {
     }
     const newHash = await bcrypt.hash(dto.new_password, SALT_ROUNDS);
     await this.usersService.updatePasswordHash(userId, newHash);
+  }
+
+  /// "Cài PIN / Vân tay" (Mục 14) — sets/replaces the account-wide app-lock
+  /// PIN, hashed the same way as the login password. Synced across every
+  /// device on this account; see `User.pinHash`'s doc comment.
+  async setPin(userId: string, dto: SetPinDto): Promise<void> {
+    const pinHash = await bcrypt.hash(dto.pin, SALT_ROUNDS);
+    await this.usersService.updatePinHash(userId, pinHash);
+  }
+
+  async clearPin(userId: string): Promise<void> {
+    await this.usersService.updatePinHash(userId, null);
+  }
+
+  /// Returns the hash (not the PIN itself) so a device can cache it locally
+  /// and verify entries offline via `bcrypt.compare` — see `User.pinHash`.
+  async getPinStatus(userId: string): Promise<{ has_pin: boolean; pin_hash: string | null }> {
+    const user = await this.usersService.findById(userId);
+    return { has_pin: !!user?.pinHash, pin_hash: user?.pinHash ?? null };
   }
 
   /// "Ảnh đại diện": returns the new user record (with `avatarUrl` set) so

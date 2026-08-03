@@ -1,38 +1,106 @@
+import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../../../core/constants/secure_storage_keys.dart';
 import '../../../shared/providers/secure_storage_provider.dart';
+import '../../auth/data/auth_repository.dart';
 
-/// Backs "Cài PIN / Vân tay" (Mục 14): the PIN itself is stored directly in
-/// [FlutterSecureStorage] (Android Keystore / iOS Keychain — the same
-/// OS-level encryption already relied on for the access/refresh tokens),
-/// not hashed client-side; there's no server round-trip involved, this is
-/// purely a local re-entry gate, not an auth credential.
+/// Backs "Cài PIN / Vân tay" (Mục 14). The PIN this device itself set is
+/// stored directly in [FlutterSecureStorage] (Android Keystore / iOS
+/// Keychain) for a fast local check — unchanged from before.
+///
+/// New: the PIN is also account-wide now (Mục — "hai máy cùng đăng nhập 1
+/// tài khoản"), synced across every device on the account via the backend
+/// (`AuthRepository.setPin`/`getPinStatus`). Only a bcrypt *hash* ever
+/// travels over the network or sits in the database — never the plaintext
+/// PIN, same treatment as the login password. A device that hasn't set its
+/// own PIN yet but belongs to an account that has one caches that hash
+/// locally (so app-lock still works fully offline, the one hard
+/// requirement here) and verifies entries against it with
+/// `BCrypt.checkpw`; the first correct entry also becomes this device's own
+/// local PIN, so every later unlock is the fast local-only path again.
 class AppLockService {
   final FlutterSecureStorage _secureStorage;
+  final AuthRepository _authRepository;
   final LocalAuthentication _localAuth = LocalAuthentication();
 
-  AppLockService(this._secureStorage);
+  AppLockService(this._secureStorage, this._authRepository);
 
+  /// Whether *this device* has its own locally-set PIN — the fast path.
   Future<bool> hasPin() async {
     final pin = await _secureStorage.read(key: SecureStorageKeys.pinCode);
     return pin != null && pin.isNotEmpty;
   }
 
-  Future<void> setPin(String pin) async {
-    await _secureStorage.write(key: SecureStorageKeys.pinCode, value: pin);
+  /// Whether app-lock should be required at all: this device's own PIN, or
+  /// (fallback) the last-synced "this account has a PIN" flag from another
+  /// device — see [syncFromServer].
+  Future<bool> isLockRequired() async {
+    if (await hasPin()) return true;
+    final synced = await _secureStorage.read(key: SecureStorageKeys.syncedHasPin);
+    return synced == 'true';
   }
 
+  Future<void> setPin(String pin) async {
+    await _secureStorage.write(key: SecureStorageKeys.pinCode, value: pin);
+    try {
+      await _authRepository.setPin(pin);
+    } catch (_) {
+      // Best-effort — this device still works with its own PIN even if the
+      // push to sync it to other devices fails (e.g. offline); nothing here
+      // blocks the local app-lock from working.
+    }
+  }
+
+  /// Checks this device's own PIN first (no network needed); if this device
+  /// has never had a PIN set but a hash was synced from another device
+  /// (cached locally by [syncFromServer]), falls back to verifying against
+  /// that hash and, on a match, adopts it as this device's own PIN so
+  /// future unlocks skip straight to the fast local path.
   Future<bool> verifyPin(String pin) async {
     final stored = await _secureStorage.read(key: SecureStorageKeys.pinCode);
-    return stored != null && stored == pin;
+    if (stored != null && stored.isNotEmpty) {
+      return stored == pin;
+    }
+    final syncedHash = await _secureStorage.read(key: SecureStorageKeys.syncedPinHash);
+    if (syncedHash == null || syncedHash.isEmpty) return false;
+    final matches = BCrypt.checkpw(pin, syncedHash);
+    if (matches) {
+      await _secureStorage.write(key: SecureStorageKeys.pinCode, value: pin);
+    }
+    return matches;
   }
 
   Future<void> clearPin() async {
     await _secureStorage.delete(key: SecureStorageKeys.pinCode);
     await _secureStorage.delete(key: SecureStorageKeys.biometricEnabled);
+    await _secureStorage.delete(key: SecureStorageKeys.syncedPinHash);
+    await _secureStorage.delete(key: SecureStorageKeys.syncedHasPin);
+    try {
+      await _authRepository.clearPin();
+    } catch (_) {
+      // best-effort — see setPin's doc comment
+    }
+  }
+
+  /// Fetches the account's current PIN status from the server and caches
+  /// it locally, so [isLockRequired]/[verifyPin] keep working offline
+  /// afterward. Call opportunistically (app resume, Settings → Bảo mật) —
+  /// never blocks anything if it fails.
+  Future<void> syncFromServer() async {
+    try {
+      final status = await _authRepository.getPinStatus();
+      await _secureStorage.write(key: SecureStorageKeys.syncedHasPin, value: status.hasPin.toString());
+      if (status.pinHash != null) {
+        await _secureStorage.write(key: SecureStorageKeys.syncedPinHash, value: status.pinHash!);
+      } else {
+        await _secureStorage.delete(key: SecureStorageKeys.syncedPinHash);
+      }
+    } catch (_) {
+      // best-effort
+    }
   }
 
   Future<bool> isBiometricEnabled() async {
@@ -46,6 +114,9 @@ class AppLockService {
 
   /// Whether this device even has usable biometric hardware enrolled — the
   /// biometric toggle in Settings is hidden entirely if this is false.
+  /// Deliberately per-device, unlike the PIN: biometric unlock relies on
+  /// this device's own enrolled fingerprints/face, which have no
+  /// equivalent to sync to another device's different hardware.
   Future<bool> isBiometricAvailable() async {
     try {
       final canCheck = await _localAuth.canCheckBiometrics;
@@ -69,5 +140,5 @@ class AppLockService {
 }
 
 final appLockServiceProvider = Provider<AppLockService>((ref) {
-  return AppLockService(ref.watch(secureStorageProvider));
+  return AppLockService(ref.watch(secureStorageProvider), ref.watch(authRepositoryProvider));
 });

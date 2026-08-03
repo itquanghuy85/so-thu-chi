@@ -32,6 +32,7 @@ class ApiEndpoints {
   static const String deleteAccount = '/auth/account';
   static const String changePassword = '/auth/change-password';
   static const String uploadAvatar = '/auth/avatar';
+  static const String pin = '/auth/pin';
 
   // Workspaces
   static const String workspaces = '/workspaces';

@@ -33,6 +33,10 @@ export class UsersService {
     await this.usersRepository.update({ id: userId }, { avatarUrl });
   }
 
+  async updatePinHash(userId: string, pinHash: string | null): Promise<void> {
+    await this.usersRepository.update({ id: userId }, { pinHash });
+  }
+
   async delete(userId: string): Promise<void> {
     await this.usersRepository.delete({ id: userId });
   }

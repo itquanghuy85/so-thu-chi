@@ -31,12 +31,22 @@ class AppLockNotifier extends StateNotifier<AppLockState> {
   }
 
   Future<void> _refreshPinConfigured() async {
-    final hasPin = await _service.hasPin();
-    state = state.copyWith(pinConfigured: hasPin);
+    final required = await _service.isLockRequired();
+    state = state.copyWith(pinConfigured: required);
   }
 
   /// Call after enabling/disabling the PIN in Settings.
   Future<void> refreshPinConfigured() => _refreshPinConfigured();
+
+  /// Call once per session right after the user is confirmed authenticated
+  /// (see `AppLockGate`) — picks up "this account now requires a PIN" from
+  /// another device before deciding whether to arm the lock, so a fresh
+  /// login on a brand-new device starts locked too if the account already
+  /// has a PIN set elsewhere.
+  Future<void> syncFromServerThenRefresh() async {
+    await _service.syncFromServer();
+    await _refreshPinConfigured();
+  }
 
   void onAppBackgrounded() {
     _backgroundedAt = DateTime.now();

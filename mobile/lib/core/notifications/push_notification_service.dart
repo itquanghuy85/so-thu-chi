@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -89,6 +90,29 @@ class PushNotificationService {
     bool force = false,
   }) async {
     try {
+      // iOS/macOS only: the FCM token can't be minted until the native APNs
+      // device token has actually arrived — an async round-trip through
+      // Apple's push service that hasn't necessarily finished by the time
+      // this runs right after app launch. Calling getToken() before that
+      // lands fails with "apns-token-not-set" (a documented, one-time
+      // per-cold-start race, not a broken setup) — so wait for it first.
+      if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) {
+        var apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+        var attempts = 0;
+        while (apnsToken == null && attempts < 10) {
+          await Future.delayed(const Duration(seconds: 1));
+          apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+          attempts++;
+        }
+        if (apnsToken == null) {
+          await secureStorage.write(
+            key: SecureStorageKeys.fcmDebugStatus,
+            value:
+                'APNS token vẫn null sau ${attempts}s chờ lúc ${DateTime.now()} — thiết bị chưa đăng ký nhận push với Apple thành công (kiểm tra lại Push Notifications capability/provisioning profile trong Xcode).',
+          );
+          return;
+        }
+      }
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null) {
         await secureStorage.write(

@@ -34,7 +34,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAAwNxHKDAZzMSInH2jBog9k6briy4FSws',
-    appId: '1:57154351827:android:a0e511b2a49760e7125a26',
+    appId: '1:57154351827:android:4a4f149bf4a8314b125a26',
     messagingSenderId: '57154351827',
     projectId: 'sothuchi-d055a',
     storageBucket: 'sothuchi-d055a.firebasestorage.app',
@@ -42,11 +42,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDP8CVi_TJ11J-uvoVbOfQX6ONo4xJ-PXg',
-    appId: '1:57154351827:ios:ab93f814a229965e125a26',
+    appId: '1:57154351827:ios:33ea2a3b897b91f6125a26',
     messagingSenderId: '57154351827',
     projectId: 'sothuchi-d055a',
     storageBucket: 'sothuchi-d055a.firebasestorage.app',
-    iosBundleId: 'com.moneyflow.mobile',
-    iosClientId: '57154351827-s7q6j3jr1jcfdpi679i0h985oo311sog.apps.googleusercontent.com',
+    iosBundleId: 'com.huluca.sochitieu',
+    iosClientId: '57154351827-0jgecmql15mi28kodn161cps9247m4cl.apps.googleusercontent.com',
   );
 }

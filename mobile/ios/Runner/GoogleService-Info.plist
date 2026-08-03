@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>57154351827-s7q6j3jr1jcfdpi679i0h985oo311sog.apps.googleusercontent.com</string>
+	<string>57154351827-0jgecmql15mi28kodn161cps9247m4cl.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.57154351827-s7q6j3jr1jcfdpi679i0h985oo311sog</string>
+	<string>com.googleusercontent.apps.57154351827-0jgecmql15mi28kodn161cps9247m4cl</string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>57154351827-175ls4sl2nivhap99o1rk82n753nh7ki.apps.googleusercontent.com</string>
+	<string>57154351827-ets60b32qpilhnr6k6bn3blfbhcnf4vq.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
 	<string>AIzaSyDP8CVi_TJ11J-uvoVbOfQX6ONo4xJ-PXg</string>
 	<key>GCM_SENDER_ID</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.moneyflow.mobile</string>
+	<string>com.huluca.sochitieu</string>
 	<key>PROJECT_ID</key>
 	<string>sothuchi-d055a</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:57154351827:ios:ab93f814a229965e125a26</string>
+	<string>1:57154351827:ios:33ea2a3b897b91f6125a26</string>
 </dict>
 </plist>

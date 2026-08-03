@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -127,6 +129,50 @@ class AuthRepository {
   Future<User> me() async {
     try {
       final response = await _dio.get(ApiEndpoints.me);
+      final json = response.data as Map<String, dynamic>;
+      await _cacheUser(json);
+      return User.fromJson(json);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// "Trang cá nhân": updates name/phone. Re-caches the response so a cold
+  /// start right after editing still shows the new values if offline.
+  Future<User> updateProfile({String? fullName, String? phone}) async {
+    try {
+      final response = await _dio.patch(ApiEndpoints.me, data: {
+        if (fullName != null) 'full_name': fullName,
+        if (phone != null) 'phone': phone,
+      });
+      final json = response.data as Map<String, dynamic>;
+      await _cacheUser(json);
+      return User.fromJson(json);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    try {
+      await _dio.patch(ApiEndpoints.changePassword, data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// "Ảnh đại diện": multipart upload of the picked image file. Returns the
+  /// updated profile (with the new `avatarUrl`) so the caller can refresh
+  /// the UI immediately without a second round-trip.
+  Future<User> uploadAvatar(File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(imageFile.path, filename: 'avatar.jpg'),
+      });
+      final response = await _dio.post(ApiEndpoints.uploadAvatar, data: formData);
       final json = response.data as Map<String, dynamic>;
       await _cacheUser(json);
       return User.fromJson(json);

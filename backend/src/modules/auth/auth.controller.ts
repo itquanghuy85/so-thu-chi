@@ -1,9 +1,13 @@
-import { Body, Controller, Delete, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Express } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUserPayload } from '../../common/decorators/current-user.decorator';
@@ -12,7 +16,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { User } from '../users/entities/user.entity';
 
 function toPublicUser(user: User) {
-  return { id: user.id, email: user.email, full_name: user.fullName };
+  return { id: user.id, email: user.email, full_name: user.fullName, avatar_url: user.avatarUrl };
 }
 
 @Controller('auth')
@@ -55,7 +59,50 @@ export class AuthController {
     if (!user) {
       throw new AppException('NOT_FOUND', 'Không tìm thấy người dùng');
     }
-    return { id: user.id, email: user.email, full_name: user.fullName, phone: user.phone, locale: user.locale };
+    return {
+      id: user.id,
+      email: user.email,
+      full_name: user.fullName,
+      phone: user.phone,
+      avatar_url: user.avatarUrl,
+      locale: user.locale,
+    };
+  }
+
+  /// "Trang cá nhân": edits name/phone. Email is the login identity (never
+  /// editable here); password has its own endpoint below since it needs
+  /// the current password re-checked, not a plain field update.
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  async updateProfile(@CurrentUser() currentUser: JwtUserPayload, @Body() dto: UpdateProfileDto) {
+    const user = await this.authService.updateProfile(currentUser.id, dto);
+    return toPublicUser(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('change-password')
+  @HttpCode(200)
+  async changePassword(@CurrentUser() currentUser: JwtUserPayload, @Body() dto: ChangePasswordDto) {
+    await this.authService.changePassword(currentUser.id, dto);
+    return { message: 'Mật khẩu đã được cập nhật' };
+  }
+
+  /// "Ảnh đại diện": multipart upload, field name `file`. 5MB cap and an
+  /// image-only mimetype check are enforced here rather than relying on
+  /// Firebase Storage to reject anything — a clear 4xx beats a vague
+  /// upload failure for something this user-facing.
+  @UseGuards(JwtAuthGuard)
+  @Post('avatar')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  async uploadAvatar(@CurrentUser() currentUser: JwtUserPayload, @UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new AppException('VALIDATION_ERROR', 'Vui lòng chọn một ảnh');
+    }
+    if (!file.mimetype.startsWith('image/')) {
+      throw new AppException('VALIDATION_ERROR', 'File phải là ảnh (jpg, png...)');
+    }
+    const user = await this.authService.updateAvatar(currentUser.id, file.buffer, file.mimetype);
+    return toPublicUser(user);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -78,6 +78,12 @@ dependencies:
   # Backup & restore: pick a backup .json file from device storage
   file_picker: ^8.1.6
 
+  # Trang cá nhân: pick a photo from gallery/camera for the avatar
+  image_picker: ^1.1.2
+
+  # Giới thiệu nhà phát triển: tap-to-call / tap-to-open-Zalo
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

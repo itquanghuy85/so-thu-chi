@@ -15,6 +15,7 @@ import '../../auth/presentation/auth_notifier.dart';
 import '../../budget/data/budget_repository.dart';
 import '../../budget/presentation/budget_management_screen.dart';
 import '../../gamification/data/gamification_repository.dart';
+import '../../settings/presentation/profile_screen.dart';
 import '../../transaction/presentation/create_transaction_sheet.dart';
 import '../../transaction/presentation/transaction_list_screen.dart';
 import '../../vault/domain/vault.dart';
@@ -90,6 +91,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               _HeaderCard(
                 userName: user?.fullName ?? workspace?.name ?? '',
+                avatarUrl: user?.avatarUrl,
                 workspaceName: workspace?.name ?? 'Sổ Thu Chi',
                 totalBalance: data.totalBalance,
                 todayNet: data.todayNet,
@@ -150,6 +152,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
 class _HeaderCard extends StatelessWidget {
   final String userName;
+  final String? avatarUrl;
   final String workspaceName;
   final num totalBalance;
   final num todayNet;
@@ -159,6 +162,7 @@ class _HeaderCard extends StatelessWidget {
 
   const _HeaderCard({
     required this.userName,
+    this.avatarUrl,
     required this.workspaceName,
     required this.totalBalance,
     required this.todayNet,
@@ -193,20 +197,30 @@ class _HeaderCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                InitialsAvatar(name: userName.isEmpty ? workspaceName : userName, radius: 22),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_greeting(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text(
-                        userName.isEmpty ? workspaceName : userName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                    child: Row(
+                      children: [
+                        InitialsAvatar(name: userName.isEmpty ? workspaceName : userName, radius: 22, imageUrl: avatarUrl),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_greeting(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                              Text(
+                                userName.isEmpty ? workspaceName : userName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const _XpBadge(),

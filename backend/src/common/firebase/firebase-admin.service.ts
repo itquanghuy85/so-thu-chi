@@ -1,11 +1,17 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import type { App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getStorage } from 'firebase-admin/storage';
 import * as path from 'path';
 import { AppException } from '../exceptions/app.exception';
+
+// From android/app/google-services.json / ios/Runner/GoogleService-Info.plist
+// (project `sothuchi-d055a`) — same bucket for both platforms.
+const STORAGE_BUCKET = 'sothuchi-d055a.firebasestorage.app';
 
 export interface VerifiedSocialUser {
   uid: string;
@@ -36,7 +42,7 @@ export class FirebaseAdminService implements OnModuleInit {
     // instead. Local dev keeps using the file, per backend/README.md.
     const inlineJson = this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT_JSON');
     if (inlineJson) {
-      this.app = initializeApp({ credential: cert(JSON.parse(inlineJson)) });
+      this.app = initializeApp({ credential: cert(JSON.parse(inlineJson)), storageBucket: STORAGE_BUCKET });
       return;
     }
 
@@ -44,6 +50,7 @@ export class FirebaseAdminService implements OnModuleInit {
     const resolved = path.isAbsolute(keyPath) ? keyPath : path.join(process.cwd(), keyPath);
     this.app = initializeApp({
       credential: cert(resolved),
+      storageBucket: STORAGE_BUCKET,
     });
   }
 
@@ -58,6 +65,38 @@ export class FirebaseAdminService implements OnModuleInit {
     } catch {
       throw new AppException('UNAUTHORIZED', 'Token đăng nhập không hợp lệ hoặc đã hết hạn');
     }
+  }
+
+  /// "Ảnh đại diện" (Trang cá nhân): uploads under a fixed per-user path
+  /// (`avatars/<userId>.jpg`, so a re-upload just overwrites the old one —
+  /// no orphaned files to clean up) and returns a public download URL in
+  /// the same `firebasestorage.googleapis.com/...?alt=media&token=...`
+  /// shape the Firebase client SDKs generate. That token-based URL form is
+  /// deliberate: it bypasses Firebase Storage Security Rules for the GET
+  /// itself (knowing the token is the authorization), which sidesteps two
+  /// real constraints here — the bucket's default rules require a Firebase
+  /// Auth session, which email/password users on this app never have
+  /// (they authenticate against this backend's own JWT instead, Firebase
+  /// Auth is only used transiently for the Google/Apple sign-in exchange);
+  /// and it needs no bucket-level "public" IAM/ACL grant, only Storage
+  /// write access on the existing service account. A fresh random token
+  /// per upload also makes the URL change every time, so clients don't
+  /// need to cache-bust a stale cached image after changing photos.
+  async uploadAvatar(userId: string, buffer: Buffer, contentType: string): Promise<string> {
+    const bucket = getStorage(this.app).bucket();
+    const filePath = `avatars/${userId}.jpg`;
+    const file = bucket.file(filePath);
+    const token = randomUUID();
+    try {
+      await file.save(buffer, {
+        contentType,
+        metadata: { metadata: { firebaseStorageDownloadTokens: token } },
+      });
+    } catch (err) {
+      this.logger.error(`Avatar upload failed: ${(err as Error).message}`);
+      throw new AppException('INTERNAL_ERROR', 'Không thể tải ảnh lên. Vui lòng thử lại sau.');
+    }
+    return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media&token=${token}`;
   }
 
   /// Best-effort push send — a failure here (invalid/expired token, FCM

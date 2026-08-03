@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_exception.dart';
@@ -96,6 +98,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _repository.clearTokens();
     await _socialAuth.signOut();
     state = const AuthState.unauthenticated();
+  }
+
+  /// "Trang cá nhân": updates [state] with the server's response so the
+  /// UI reflects the new name/phone immediately.
+  Future<void> updateProfile({String? fullName, String? phone}) async {
+    final user = await _repository.updateProfile(fullName: fullName, phone: phone);
+    state = AuthState.authenticated(user);
+  }
+
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    await _repository.changePassword(currentPassword: currentPassword, newPassword: newPassword);
+  }
+
+  Future<void> uploadAvatar(File imageFile) async {
+    final user = await _repository.uploadAvatar(imageFile);
+    state = AuthState.authenticated(user);
   }
 
   /// Invoked by the Dio interceptor when a token refresh fails, so the

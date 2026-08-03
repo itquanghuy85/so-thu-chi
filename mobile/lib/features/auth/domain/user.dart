@@ -6,6 +6,7 @@ class User {
   final String fullName;
   final String? phone;
   final String? locale;
+  final String? avatarUrl;
 
   const User({
     required this.id,
@@ -13,6 +14,7 @@ class User {
     required this.fullName,
     this.phone,
     this.locale,
+    this.avatarUrl,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,7 @@ class User {
       fullName: (json['full_name'] ?? json['fullName'] ?? '') as String,
       phone: json['phone'] as String?,
       locale: json['locale'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
     );
   }
 }

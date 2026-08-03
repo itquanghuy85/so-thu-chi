@@ -47,6 +47,9 @@
 	<!-- local_auth (Mục 14): Face ID app-lock unlock. Touch ID needs no usage string. -->
 	<key>NSFaceIDUsageDescription</key>
 	<string>Sổ Thu Chi dùng Face ID để mở khoá ứng dụng nhanh chóng.</string>
+	<!-- image_picker (Trang cá nhân): choosing an avatar photo. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Sổ Thu Chi cần quyền truy cập thư viện ảnh để chọn ảnh đại diện.</string>
 	<!-- Push notifications (Mục — "Thông báo đẩy"): lets FCM wake the app to
 	     refresh a silent/background push. Actually receiving remote pushes
 	     on a real device also needs an APNs key configured in the Apple

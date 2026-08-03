@@ -24,6 +24,19 @@ export class UsersService {
     await this.usersRepository.update({ id: userId }, { fcmToken: token });
   }
 
+  async updateProfile(userId: string, data: { fullName?: string; phone?: string }): Promise<User> {
+    await this.usersRepository.update({ id: userId }, data);
+    return (await this.findById(userId))!;
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+    await this.usersRepository.update({ id: userId }, { passwordHash });
+  }
+
+  async updateAvatarUrl(userId: string, avatarUrl: string): Promise<void> {
+    await this.usersRepository.update({ id: userId }, { avatarUrl });
+  }
+
   async delete(userId: string): Promise<void> {
     await this.usersRepository.delete({ id: userId });
   }

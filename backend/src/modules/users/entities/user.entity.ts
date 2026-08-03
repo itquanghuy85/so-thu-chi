@@ -18,6 +18,9 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   phone: string | null;
 
+  @Column({ name: 'avatar_url', type: 'varchar', nullable: true })
+  avatarUrl: string | null;
+
   @Column({ default: 'vi' })
   locale: string;
 

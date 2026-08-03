@@ -14,6 +14,8 @@ import { WorkspaceMember } from '../workspaces/entities/workspace-member.entity'
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 export interface TokenPair {
   access_token: string;
@@ -123,6 +125,48 @@ export class AuthService {
       );
     }
     await this.usersService.delete(userId);
+  }
+
+  /// "Trang cá nhân": name/phone only — email and password have their own
+  /// dedicated flows (email is the login identity, never editable here;
+  /// password goes through `changePassword` since it needs the current
+  /// password re-checked).
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
+    return this.usersService.updateProfile(userId, {
+      fullName: dto.full_name,
+      phone: dto.phone,
+    });
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new AppException('NOT_FOUND', 'Không tìm thấy người dùng');
+    }
+    if (!user.passwordHash) {
+      // Google/Apple-only account — there's no existing password to
+      // "change" against; setting one from scratch is a different, not-yet-
+      // built flow (would need re-verifying the social identity, not a
+      // current-password check).
+      throw new AppException(
+        'VALIDATION_ERROR',
+        'Tài khoản này đăng nhập bằng Google/Apple, chưa có mật khẩu để đổi',
+      );
+    }
+    const matches = await bcrypt.compare(dto.current_password, user.passwordHash);
+    if (!matches) {
+      throw new AppException('INVALID_CREDENTIALS', 'Mật khẩu hiện tại không đúng');
+    }
+    const newHash = await bcrypt.hash(dto.new_password, SALT_ROUNDS);
+    await this.usersService.updatePasswordHash(userId, newHash);
+  }
+
+  /// "Ảnh đại diện": returns the new user record (with `avatarUrl` set) so
+  /// the caller doesn't need a second round-trip to refresh the profile.
+  async updateAvatar(userId: string, buffer: Buffer, contentType: string): Promise<User> {
+    const url = await this.firebaseAdminService.uploadAvatar(userId, buffer, contentType);
+    await this.usersService.updateAvatarUrl(userId, url);
+    return (await this.usersService.findById(userId))!;
   }
 
   private issueTokens(user: User): TokenPair {

@@ -30,6 +30,8 @@ class ApiEndpoints {
   static const String me = '/auth/me';
   static const String socialLogin = '/auth/social-login';
   static const String deleteAccount = '/auth/account';
+  static const String changePassword = '/auth/change-password';
+  static const String uploadAvatar = '/auth/avatar';
 
   // Workspaces
   static const String workspaces = '/workspaces';

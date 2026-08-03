@@ -26,6 +26,9 @@ import '../../workspace/data/workspace_repository.dart';
 import '../../workspace/domain/workspace.dart';
 import '../../workspace/presentation/backup_restore_screen.dart';
 import '../../workspace/presentation/member_management_screen.dart';
+import 'about_screen.dart';
+import 'profile_screen.dart';
+import 'user_guide_screen.dart';
 
 /// Cài đặt (Mục 12.13). Integrations, notifications, theme switcher and
 /// voice config remain next-sprint scope (see mobile/README.md).
@@ -49,28 +52,36 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           if (user != null)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: n.isGame ? [accent, Color.lerp(accent, Colors.black, 0.35)!] : AppColors.heroGradient(accent), begin: Alignment.topLeft, end: Alignment.bottomRight),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: n.isGame ? [BoxShadow(color: accent.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))] : null,
-              ),
-              child: Row(
-                children: [
-                  InitialsAvatar(name: user.fullName, radius: 26),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user.fullName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(height: 2),
-                        Text(user.email, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      ],
-                    ),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: n.isGame ? [accent, Color.lerp(accent, Colors.black, 0.35)!] : AppColors.heroGradient(accent), begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: n.isGame ? [BoxShadow(color: accent.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))] : null,
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      InitialsAvatar(name: user.fullName, radius: 26, imageUrl: user.avatarUrl),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(user.fullName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 2),
+                            Text(user.email, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white70),
+                    ],
+                  ),
+                ),
               ),
             ),
           const SizedBox(height: 16),
@@ -201,6 +212,33 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: 'Nhật ký sửa/xóa giao dịch, chốt sổ',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AuditLogScreen()),
+                ),
+                showChevron: true,
+                neutrals: n,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'Trợ giúp',
+            neutrals: n,
+            children: [
+              _SettingsTile(
+                icon: Icons.menu_book_outlined,
+                color: sectionAccent(AppSection.settings, style),
+                title: 'Hướng dẫn sử dụng',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const UserGuideScreen()),
+                ),
+                showChevron: true,
+                neutrals: n,
+              ),
+              _SettingsTile(
+                icon: Icons.info_outline,
+                color: sectionAccent(AppSection.settings, style),
+                title: 'Giới thiệu',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AboutScreen()),
                 ),
                 showChevron: true,
                 neutrals: n,

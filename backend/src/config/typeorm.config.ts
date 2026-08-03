@@ -18,6 +18,7 @@ import { RecurringTransaction } from '../modules/recurring/entities/recurring-tr
 import { Shift } from '../modules/shifts/entities/shift.entity';
 import { AuditLog } from '../modules/audit/entities/audit-log.entity';
 import { DailyClosing } from '../modules/daily-closings/entities/daily-closing.entity';
+import { PushToken } from '../modules/notifications/entities/push-token.entity';
 
 export const entities = [
   User,
@@ -38,6 +39,7 @@ export const entities = [
   Shift,
   AuditLog,
   DailyClosing,
+  PushToken,
 ];
 
 export function buildTypeOrmOptions(configService: ConfigService): TypeOrmModuleOptions {

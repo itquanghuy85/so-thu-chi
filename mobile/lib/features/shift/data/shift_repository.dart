@@ -22,10 +22,15 @@ class ShiftRepository {
     }
   }
 
+  /// A backend response of `null` (no open shift) arrives as an empty HTTP
+  /// body, not the JSON literal `null` — Nest/Express's `res.send(null)`
+  /// sends no body at all, which dio decodes as an empty [String], not
+  /// Dart `null`. Checking `is! Map` (rather than `== null`) catches that
+  /// case along with the real null.
   Future<Shift?> getCurrent(String workspaceId) async {
     try {
       final response = await _dio.get(ApiEndpoints.shiftCurrent(workspaceId));
-      if (response.data == null) return null;
+      if (response.data is! Map<String, dynamic>) return null;
       return Shift.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);

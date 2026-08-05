@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,6 +16,7 @@ import '../../../shared/widgets/initials_avatar.dart';
 import '../../auth/presentation/auth_notifier.dart';
 import '../../../core/notifications/notifications_repository.dart';
 import '../../../core/notifications/push_notification_service.dart';
+import '../../../core/notifications/reminder_notification_service.dart';
 import '../../../shared/providers/secure_storage_provider.dart';
 import '../../audit/presentation/audit_log_screen.dart';
 import '../../budget/presentation/budget_management_screen.dart';
@@ -208,6 +210,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          _ReminderSection(n: n),
           const SizedBox(height: 16),
           _SectionCard(
             title: 'Bảo mật',
@@ -589,6 +593,93 @@ class _SettingsTile extends StatelessWidget {
       title: Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: titleColor ?? neutrals.textPrimary)),
       subtitle: subtitle != null ? Text(subtitle!, style: TextStyle(color: neutrals.textSecondary)) : null,
       trailing: showChevron ? Icon(Icons.chevron_right, color: neutrals.textSecondary) : null,
+    );
+  }
+}
+
+/// Hai toggle bật/tắt nhắc nhở hằng ngày — 7:00 sáng và 22:00 tối.
+class _ReminderSection extends ConsumerStatefulWidget {
+  final ScreenNeutrals n;
+  const _ReminderSection({required this.n});
+
+  @override
+  ConsumerState<_ReminderSection> createState() => _ReminderSectionState();
+}
+
+class _ReminderSectionState extends ConsumerState<_ReminderSection> {
+  bool _morningOn = true;
+  bool _eveningOn = true;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final s = ref.read(secureStorageProvider);
+    final m = await s.read(key: SecureStorageKeys.reminderMorningEnabled);
+    final e = await s.read(key: SecureStorageKeys.reminderEveningEnabled);
+    if (mounted) setState(() {
+      _morningOn = m != 'false';
+      _eveningOn = e != 'false';
+      _loaded = true;
+    });
+  }
+
+  Future<void> _toggle(bool isMorning, bool value) async {
+    setState(() => isMorning ? _morningOn = value : _eveningOn = value);
+    final s = ref.read(secureStorageProvider);
+    await s.write(
+      key: isMorning ? SecureStorageKeys.reminderMorningEnabled : SecureStorageKeys.reminderEveningEnabled,
+      value: value.toString(),
+    );
+    // Áp dụng ngay lập tức — re-schedule hoặc cancel tương ứng.
+    await ReminderNotificationService(FlutterLocalNotificationsPlugin()).applySettings(
+      morningEnabled: _morningOn,
+      eveningEnabled: _eveningOn,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(value
+            ? (isMorning ? 'Đã bật nhắc nhở 7:00 sáng ☀️' : 'Đã bật nhắc nhở 22:00 tối 🌙')
+            : (isMorning ? 'Đã tắt nhắc nhở buổi sáng' : 'Đã tắt nhắc nhở buổi tối')),
+        duration: const Duration(seconds: 2),
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.n;
+    if (!_loaded) return const SizedBox.shrink();
+    return _SectionCard(
+      title: 'Nhắc nhở hằng ngày',
+      neutrals: n,
+      children: [
+        ListTile(
+          leading: CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.orange.withValues(alpha: 0.12),
+            child: const Icon(Icons.wb_sunny_outlined, color: Colors.orange, size: 18),
+          ),
+          title: Text('Mở ca buổi sáng', style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
+          subtitle: Text('7:00 sáng — mở ca & kiểm tra túi tiền', style: TextStyle(color: n.textSecondary, fontSize: 12)),
+          trailing: Switch.adaptive(value: _morningOn, onChanged: (v) => _toggle(true, v)),
+        ),
+        Divider(height: 1, indent: 56, color: n.divider),
+        ListTile(
+          leading: CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.indigo.withValues(alpha: 0.12),
+            child: const Icon(Icons.nightlight_outlined, color: Colors.indigo, size: 18),
+          ),
+          title: Text('Chốt sổ buổi tối', style: TextStyle(fontWeight: FontWeight.w600, color: n.textPrimary)),
+          subtitle: Text('22:00 tối — kiểm tra thu chi & chốt quỹ', style: TextStyle(color: n.textSecondary, fontSize: 12)),
+          trailing: Switch.adaptive(value: _eveningOn, onChanged: (v) => _toggle(false, v)),
+        ),
+      ],
     );
   }
 }

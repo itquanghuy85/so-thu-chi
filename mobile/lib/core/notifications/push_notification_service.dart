@@ -11,6 +11,7 @@ import '../../app.dart';
 import '../constants/secure_storage_keys.dart';
 import '../../shared/providers/secure_storage_provider.dart';
 import 'notifications_repository.dart';
+import 'reminder_notification_service.dart';
 
 const _androidChannel = AndroidNotificationChannel(
   'high_importance_channel',
@@ -44,7 +45,8 @@ class PushNotificationService {
 
     await _localNotifications.initialize(
       const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        // ic_stat_notification là white monochrome drawable — bắt buộc Android 5+.
+        android: AndroidInitializationSettings('ic_stat_notification'),
         iOS: DarwinInitializationSettings(),
       ),
       onDidReceiveNotificationResponse: (response) {
@@ -56,6 +58,17 @@ class PushNotificationService {
     await _localNotifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_androidChannel);
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(ReminderNotificationService.channel);
+
+    // Schedule daily reminders theo cài đặt người dùng (default: bật).
+    final morningOn = await ref.read(secureStorageProvider).read(key: SecureStorageKeys.reminderMorningEnabled) != 'false';
+    final eveningOn = await ref.read(secureStorageProvider).read(key: SecureStorageKeys.reminderEveningEnabled) != 'false';
+    await ReminderNotificationService(_localNotifications).applySettings(
+      morningEnabled: morningOn,
+      eveningEnabled: eveningOn,
+    );
 
     FirebaseMessaging.onMessage.listen((message) => _showForegroundNotification(message));
     FirebaseMessaging.onMessageOpenedApp.listen((message) => _navigate(ref, message.data));
@@ -214,6 +227,12 @@ class PushNotificationService {
         break;
       case 'budget_over_limit':
         router.go('/budgets');
+        break;
+      case 'morning_reminder':
+        router.go('/shift');
+        break;
+      case 'evening_reminder':
+        router.go('/daily-closing');
         break;
     }
   }

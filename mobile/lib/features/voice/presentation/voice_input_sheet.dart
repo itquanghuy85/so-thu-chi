@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+import '../../../app.dart' show goRouterProvider;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/offline/sync_queue_service.dart';
@@ -309,6 +310,14 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
     }
 
     if (!mounted) return;
+
+    // Lệnh điều hướng — đóng sheet rồi navigate ngay, không cần form.
+    if (isNavigationIntent(nluResult.intent)) {
+      Navigator.of(context).pop();
+      ref.read(goRouterProvider).go(routeForIntent(nluResult.intent));
+      return;
+    }
+
     setState(() {
       _parseSource = nluResult.source;
       _intent = nluResult.intent == VoiceIntent.unknown ? VoiceIntent.income : nluResult.intent;
@@ -345,6 +354,12 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
         case VoiceIntent.debtDecrease:
           if (_customer == null || _vaultId == null) throw const _MissingFieldException('Vui lòng chọn khách hàng và túi nhận tiền');
           await repo.createDebtDecrease(workspaceId: workspaceId, customerId: _customer!.id, toVaultId: _vaultId!, amount: amount, source: 'voice');
+        // Navigation intents are handled before this switch — should never reach here.
+        case VoiceIntent.openShift:
+        case VoiceIntent.closeShift:
+        case VoiceIntent.dailyClosing:
+        case VoiceIntent.viewReport:
+        case VoiceIntent.viewVaults:
         case VoiceIntent.unknown:
           break;
       }

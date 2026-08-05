@@ -55,6 +55,9 @@ dependencies:
   # Push notifications (Mục — "Thông báo đẩy"): FCM delivery + foreground display
   firebase_messaging: ^15.1.3
   flutter_local_notifications: ^18.0.1
+  # Timezone-aware scheduled notifications (nhắc nhở hằng ngày)
+  flutter_timezone: ^5.1.0
+  timezone: ^0.9.4
 
   # Charts for the Reports screens
   fl_chart: ^0.69.0

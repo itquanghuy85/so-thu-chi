@@ -13,6 +13,9 @@ class SecureStorageKeys {
   static const String onboardingSeen = 'onboarding_seen';
   static const String fcmToken = 'fcm_token_registered';
 
+  static const String reminderMorningEnabled = 'reminder_morning_enabled';
+  static const String reminderEveningEnabled = 'reminder_evening_enabled';
+
   /// Temporary — human-readable outcome of the last FCM registration
   /// attempt, shown in Settings so this can be diagnosed on-device without
   /// needing an Xcode/adb console. Remove once iOS push is confirmed

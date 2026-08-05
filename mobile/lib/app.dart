@@ -8,6 +8,8 @@ import 'core/constants/game_colors.dart';
 import 'core/theme/visual_style_provider.dart';
 import 'features/ai_chat/presentation/ai_chat_screen.dart';
 import 'features/auth/presentation/auth_notifier.dart';
+import 'features/daily_closing/presentation/daily_closing_screen.dart';
+import 'features/shift/presentation/shift_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/register_screen.dart';
 import 'features/auth/presentation/splash_screen.dart';
@@ -95,6 +97,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // (see PushNotificationService._navigate) — not otherwise linked from
       // the bottom nav, only from Settings > Ngân sách.
       GoRoute(path: '/budgets', builder: (context, state) => const BudgetManagementScreen()),
+      // Notification tap targets for morning/evening reminders
+      GoRoute(path: '/shift', builder: (context, state) => const ShiftScreen()),
+      GoRoute(path: '/daily-closing', builder: (context, state) => const DailyClosingScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => MainShellScreen(navigationShell: navigationShell),
         branches: [

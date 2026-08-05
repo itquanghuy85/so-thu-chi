@@ -38,7 +38,7 @@ class AppDatabase {
     final path = p.join(dbPath, 'sothuchi_offline.db');
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE response_cache (
@@ -62,6 +62,7 @@ class AppDatabase {
           )
         ''');
         await db.execute(_fieldHistoryTableSql);
+        await db.execute(_supplierFlagsTableSql);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -69,6 +70,9 @@ class AppDatabase {
         }
         if (oldVersion < 3) {
           await db.execute("ALTER TABLE pending_operations ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
+        }
+        if (oldVersion < 4) {
+          await db.execute(_supplierFlagsTableSql);
         }
       },
     );
@@ -91,6 +95,16 @@ class AppDatabase {
       use_count INTEGER NOT NULL DEFAULT 1,
       last_used_at INTEGER NOT NULL,
       UNIQUE(workspace_id, field_key, value)
+    )
+  ''';
+
+  /// Nhà cung cấp (phải trả) được lưu trên server như "customers" thông
+  /// thường. Bảng này chỉ lưu flag phân biệt — khi bị xóa/reinstall, dữ
+  /// liệu giao dịch vẫn an toàn trên server; chỉ mất nhãn "NCC" mà thôi.
+  static const _supplierFlagsTableSql = '''
+    CREATE TABLE supplier_flags (
+      customer_id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL
     )
   ''';
 
@@ -300,5 +314,33 @@ class AppDatabase {
       whereArgs: workspaceId != null ? [workspaceId] : null,
     );
     return Sqflite.firstIntValue(rows) ?? 0;
+  }
+
+  // --- Supplier flags -------------------------------------------------
+
+  Future<void> markAsSupplier(String customerId, String workspaceId) async {
+    final db = await database;
+    await db.insert(
+      'supplier_flags',
+      {'customer_id': customerId, 'workspace_id': workspaceId},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> removeSupplierFlag(String customerId) async {
+    final db = await database;
+    await db.delete('supplier_flags', where: 'customer_id = ?', whereArgs: [customerId]);
+  }
+
+  Future<Set<String>> getSupplierIds(String workspaceId) async {
+    final db = await database;
+    final rows = await db.query('supplier_flags', columns: ['customer_id'], where: 'workspace_id = ?', whereArgs: [workspaceId]);
+    return rows.map((r) => r['customer_id'] as String).toSet();
+  }
+
+  Future<bool> isSupplier(String customerId) async {
+    final db = await database;
+    final rows = await db.query('supplier_flags', where: 'customer_id = ?', whereArgs: [customerId], limit: 1);
+    return rows.isNotEmpty;
   }
 }

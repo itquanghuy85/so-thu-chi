@@ -200,11 +200,16 @@ class AppDatabase {
   /// Rows still waiting to be replayed (`status = 'pending'`), with
   /// `payload` already decoded back into a `Map`. Excludes rows the server
   /// has already rejected — see [getFailedOperations] for those.
-  Future<List<Map<String, dynamic>>> getPendingOperations({String? workspaceId}) async {
+  /// Pass [includeSyncing] = true for display/echo purposes so rows that
+  /// flush() has already moved to 'syncing' (POST in-flight) still show up
+  /// in the optimistic list — they'd disappear otherwise, making the user
+  /// wait out the full network round-trip before seeing the new entry.
+  Future<List<Map<String, dynamic>>> getPendingOperations({String? workspaceId, bool includeSyncing = false}) async {
     final db = await database;
+    final statusClause = includeSyncing ? "status IN ('pending', 'syncing')" : "status = 'pending'";
     final rows = await db.query(
       'pending_operations',
-      where: workspaceId != null ? "workspace_id = ? AND status = 'pending'" : "status = 'pending'",
+      where: workspaceId != null ? "workspace_id = ? AND $statusClause" : statusClause,
       whereArgs: workspaceId != null ? [workspaceId] : null,
       orderBy: 'created_at ASC',
     );
@@ -265,6 +270,15 @@ class AppDatabase {
   }
 
   Future<void> dismissFailedOperation(int id) => deleteOperation(id);
+
+  Future<void> clearAllFailedOperations({String? workspaceId}) async {
+    final db = await database;
+    await db.delete(
+      'pending_operations',
+      where: workspaceId != null ? "workspace_id = ? AND status = 'failed'" : "status = 'failed'",
+      whereArgs: workspaceId != null ? [workspaceId] : null,
+    );
+  }
 
   Future<int> countPendingOperations({String? workspaceId}) async {
     final db = await database;

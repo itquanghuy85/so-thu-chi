@@ -86,7 +86,9 @@ class TransactionRepository {
   /// full network round trip above resolves, which can take tens of seconds
   /// against a cold backend even though the response would include it anyway.
   Future<List<Transaction>> getPendingEcho({required String workspaceId, String? type}) async {
-    final ops = await AppDatabase.instance.getPendingOperations(workspaceId: workspaceId);
+    // includeSyncing=true: flush() marks rows 'syncing' before the POST fires,
+    // so without this the echo would be empty while the request is in-flight.
+    final ops = await AppDatabase.instance.getPendingOperations(workspaceId: workspaceId, includeSyncing: true);
     return ops
         .where((op) => op['kind'] == 'create_transaction')
         .map((op) => _pendingTransactionFromOp(op))

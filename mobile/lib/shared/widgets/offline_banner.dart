@@ -103,6 +103,12 @@ class _FailedOperationsSheetState extends ConsumerState<_FailedOperationsSheet> 
     await _load();
   }
 
+  Future<void> _dismissAll() async {
+    await AppDatabase.instance.clearAllFailedOperations();
+    ref.invalidate(failedSyncCountProvider);
+    await _load();
+  }
+
   String _summarize(Map<String, dynamic> op) {
     final payload = op['payload'] as Map<String, dynamic>;
     final amount = (payload['amount'] as num?) ?? 0;
@@ -126,7 +132,17 @@ class _FailedOperationsSheetState extends ConsumerState<_FailedOperationsSheet> 
               'Các giao dịch này đã lưu tạm trên máy nhưng máy chủ từ chối khi đồng bộ — có thể do không đủ số dư hoặc dữ liệu không hợp lệ. Bạn có thể xoá và nhập lại.',
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                label: const Text('Xóa tất cả'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                onPressed: (_ops?.isEmpty ?? true) ? null : _dismissAll,
+              ),
+            ),
+            const SizedBox(height: 8),
             Expanded(
               child: ops == null
                   ? const Center(child: CircularProgressIndicator())

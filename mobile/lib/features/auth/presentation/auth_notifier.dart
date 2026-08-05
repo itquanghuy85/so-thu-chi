@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_exception.dart';
+import '../../../core/offline/app_database.dart';
 import '../data/auth_repository.dart';
 import '../data/social_auth_service.dart';
 import '../domain/user.dart';
@@ -86,6 +87,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     await _repository.clearTokens();
     await _socialAuth.signOut();
+    await AppDatabase.instance.clearAllFailedOperations();
     state = const AuthState.unauthenticated();
   }
 
@@ -97,6 +99,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _repository.deleteAccount();
     await _repository.clearTokens();
     await _socialAuth.signOut();
+    await AppDatabase.instance.clearAllFailedOperations();
     state = const AuthState.unauthenticated();
   }
 

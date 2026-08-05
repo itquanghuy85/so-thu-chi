@@ -9,6 +9,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
 import '../../../shared/widgets/amount_text_field.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
+import '../../ai_chat/data/deepseek_nlu_service.dart';
 import '../../category/data/category_repository.dart';
 import '../../debt/domain/customer.dart';
 import '../../transaction/data/transaction_repository.dart';
@@ -261,6 +262,8 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
   Customer? _customer;
   bool _isSaving = false;
   bool _parsed = false;
+  /// 'ai' | 'regex' | 'cache' — hiển thị badge nguồn phân tích
+  String _parseSource = 'regex';
 
   @override
   void dispose() {
@@ -277,21 +280,45 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
     final incomeCategories = await ref.read(categoryRepositoryProvider).getCategories(workspaceId: workspaceId, group: 'income');
     final expenseCategories = await ref.read(categoryRepositoryProvider).getCategories(workspaceId: workspaceId, group: 'expense');
 
-    final result = parseVoiceTranscript(
-      widget.transcript,
-      vaultNames: vaults.map((v) => v.name).toList(),
-      categoryNames: [...incomeCategories, ...expenseCategories].map((c) => c.name).toList(),
-    );
+    final vaultNames = vaults.map((v) => v.name).toList();
+    final categoryNames = [...incomeCategories, ...expenseCategories].map((c) => c.name).toList();
 
-    final matchedVault = vaults.where((v) => v.name == result.vaultNameGuess).toList();
-    final matchedCategory = [...incomeCategories, ...expenseCategories].where((c) => c.name == result.categoryNameGuess).toList();
+    // Dùng DeepSeekNluService: regex fast path trước, AI fallback khi cần
+    final nluResult = await ref.read(deepSeekNluServiceProvider).parseTransaction(
+          widget.transcript,
+          vaultNames: vaultNames,
+          categoryNames: categoryNames,
+        );
+
+    final matchedVault = vaults.where((v) => v.name == nluResult.vaultNameGuess).toList();
+
+    // Map category: ưu tiên AI category slug → workspace category name → ID
+    String? resolvedCategoryId;
+    if (nluResult.category != null) {
+      // Tìm category workspace có tên khớp slug AI trả về
+      final allCategories = [...incomeCategories, ...expenseCategories];
+      final matched = allCategories.where((c) =>
+        c.name.toLowerCase().contains(nluResult.category!.label.toLowerCase()) ||
+        nluResult.category!.label.toLowerCase().contains(c.name.toLowerCase())
+      ).toList();
+      if (matched.isNotEmpty) resolvedCategoryId = matched.first.id;
+    } else if (nluResult.categoryNameGuess != null) {
+      final allCategories = [...incomeCategories, ...expenseCategories];
+      final matched = allCategories.where((c) => c.name == nluResult.categoryNameGuess).toList();
+      if (matched.isNotEmpty) resolvedCategoryId = matched.first.id;
+    }
 
     if (!mounted) return;
     setState(() {
-      _intent = result.intent == VoiceIntent.unknown ? VoiceIntent.income : result.intent;
-      if (result.amount != null) _amountController.text = NumberFormatUtil.grouped(result.amount!);
+      _parseSource = nluResult.source;
+      _intent = nluResult.intent == VoiceIntent.unknown ? VoiceIntent.income : nluResult.intent;
+      if (nluResult.amount != null) _amountController.text = NumberFormatUtil.grouped(nluResult.amount!);
       if (matchedVault.isNotEmpty) _vaultId = matchedVault.first.id;
-      if (matchedCategory.isNotEmpty) _categoryId = matchedCategory.first.id;
+      if (resolvedCategoryId != null) _categoryId = resolvedCategoryId;
+      // Ghi chú từ AI thông minh hơn regex
+      if (nluResult.note != null && nluResult.note!.isNotEmpty) {
+        _noteController.text = nluResult.note!;
+      }
     });
   }
 
@@ -355,6 +382,8 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
                 const Icon(Icons.record_voice_over_outlined, size: 18, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(child: Text('"${widget.transcript}"', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13))),
+                _ParseSourceBadge(source: _parseSource),
+                const SizedBox(width: 4),
                 TextButton(onPressed: widget.onRestart, child: const Text('Nói lại')),
               ],
             ),
@@ -447,4 +476,29 @@ class _MissingFieldException implements Exception {
 /// mirrored from `debt_transaction_tab.dart`'s "Trả hết" helper.
 class NumberFormatUtil {
   static String grouped(num amount) => formatVND(amount).replaceAll('đ', '');
+}
+
+/// Badge nhỏ hiển thị nguồn phân tích câu nói: AI / cache / regex.
+class _ParseSourceBadge extends StatelessWidget {
+  final String source;
+
+  const _ParseSourceBadge({required this.source});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (source) {
+      'ai' => ('✨ AI', const Color(0xFF6C63FF)),
+      'cache' => ('⚡ cache', const Color(0xFF00897B)),
+      _ => ('regex', AppColors.textSecondary),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+    );
+  }
 }

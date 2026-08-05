@@ -56,6 +56,15 @@ class MainShellScreen extends ConsumerWidget {
           Expanded(child: navigationShell),
         ],
       ),
+      // Nút AI chat nhanh — nổi phía trên bottom nav, không cản tab bar
+      floatingActionButton: FloatingActionButton.small(
+        heroTag: 'ai_chat_fab',
+        tooltip: 'Trợ lý AI',
+        backgroundColor: const Color(0xFF6C63FF),
+        onPressed: () => context.push('/ai-chat'),
+        child: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           color: n.surface,

@@ -6,6 +6,7 @@ import 'core/constants/app_colors.dart';
 import 'core/constants/dark_colors.dart';
 import 'core/constants/game_colors.dart';
 import 'core/theme/visual_style_provider.dart';
+import 'features/ai_chat/presentation/ai_chat_screen.dart';
 import 'features/auth/presentation/auth_notifier.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/register_screen.dart';
@@ -88,6 +89,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       GoRoute(path: '/workspaces', builder: (context, state) => const WorkspacePickerScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+      GoRoute(path: '/ai-chat', builder: (context, state) => const AiChatScreen()),
       GoRoute(path: '/gamification', builder: (context, state) => const GamificationScreen()),
       // Deep-link target for the "budget_over_limit" push notification
       // (see PushNotificationService._navigate) — not otherwise linked from

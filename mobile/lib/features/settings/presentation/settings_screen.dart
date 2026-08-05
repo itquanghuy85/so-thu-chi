@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/dark_colors.dart';
@@ -188,6 +189,22 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 showChevron: true,
                 neutrals: n,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'Trợ lý AI',
+            neutrals: n,
+            children: [
+              _SettingsTile(
+                icon: Icons.auto_awesome,
+                color: const Color(0xFF6C63FF),
+                title: 'Chat với Trợ lý Tài chính',
+                subtitle: 'Hỏi đáp, tư vấn thu chi, phân tích tài chính',
+                showChevron: true,
+                neutrals: n,
+                onTap: () => context.push('/ai-chat'),
               ),
             ],
           ),

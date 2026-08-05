@@ -182,8 +182,11 @@ class PushNotificationService {
   Future<void> _showForegroundNotification(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) return;
+    // Unique ID per notification avoids later ones silently replacing earlier
+    // ones that share the same hashCode.
+    final id = DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
     await _localNotifications.show(
-      notification.hashCode,
+      id,
       notification.title,
       notification.body,
       NotificationDetails(
@@ -193,7 +196,8 @@ class PushNotificationService {
           channelDescription: _androidChannel.description,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          // Monochrome drawable required on Android 5+ for notification icons.
+          icon: '@drawable/ic_stat_notification',
         ),
         iOS: const DarwinNotificationDetails(),
       ),

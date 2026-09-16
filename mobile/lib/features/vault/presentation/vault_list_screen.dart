@@ -11,6 +11,7 @@ import '../../../shared/widgets/section_app_bar.dart';
 import '../data/vault_repository.dart';
 import '../domain/vault.dart';
 import 'create_vault_sheet.dart';
+import 'edit_vault_sheet.dart';
 import 'reconcile_sheet.dart';
 import 'vault_detail_screen.dart';
 
@@ -40,7 +41,12 @@ class VaultListScreen extends ConsumerWidget {
       appBar: SectionAppBar(title: 'Túi tiền', style: style),
       body: vaultsAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
-        error: (error, _) => Center(child: Text('Không thể tải danh sách túi tiền', style: TextStyle(color: n.textPrimary))),
+        error: (error, _) => EmptyStateWidget(
+          message: 'Không thể tải danh sách túi tiền',
+          icon: Icons.cloud_off_outlined,
+          accent: accent,
+          action: TextButton(onPressed: () => ref.invalidate(vaultListProvider), child: const Text('Thử lại')),
+        ),
         data: (vaults) {
           if (vaults.isEmpty) {
             return EmptyStateWidget(
@@ -134,13 +140,27 @@ class _VaultTile extends ConsumerWidget {
                 children: [
                   Text(formatVND(vault.currentBalance), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: n.textPrimary)),
                   const SizedBox(height: 2),
-                  TextButton(
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24), visualDensity: VisualDensity.compact),
-                    onPressed: () async {
-                      final done = await showReconcileFlow(context, ref);
-                      if (done == true) ref.invalidate(vaultListProvider);
-                    },
-                    child: const Text('Kiểm kê', style: TextStyle(fontSize: 11)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Sửa túi tiền',
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        style: IconButton.styleFrom(minimumSize: const Size(32, 28), padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                        onPressed: () async {
+                          final done = await showEditVaultSheet(context, vault);
+                          if (done == true) ref.invalidate(vaultListProvider);
+                        },
+                      ),
+                      TextButton(
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24), visualDensity: VisualDensity.compact),
+                        onPressed: () async {
+                          final done = await showReconcileFlow(context, ref);
+                          if (done == true) ref.invalidate(vaultListProvider);
+                        },
+                        child: const Text('Kiểm kê', style: TextStyle(fontSize: 11)),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -80,6 +80,25 @@ class VaultRepository {
     }
   }
 
+  /// Rename / change type of an existing (non-virtual) vault. The server is
+  /// the authority on which fields changed; sending both a rename and a
+  /// retype in one call is fine.
+  Future<Vault> updateVault({
+    required String vaultId,
+    String? name,
+    VaultType? type,
+  }) async {
+    try {
+      final response = await _dio.patch(ApiEndpoints.updateVault(vaultId), data: {
+        if (name != null && name.isNotEmpty) 'name': name,
+        if (type != null) 'type': vaultTypeToString(type),
+      });
+      return Vault.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// Blocked server-side (`CONFLICT`) if the vault has ever appeared in a
   /// transaction — see `VaultsService.remove`'s doc comment.
   Future<void> deleteVault(String vaultId) async {

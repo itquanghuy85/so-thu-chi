@@ -13,6 +13,7 @@ import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
 import '../../category/domain/category_icons.dart';
+import '../../debt/domain/customer.dart';
 import '../../vault/data/vault_repository.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction.dart';
@@ -22,7 +23,26 @@ import 'transaction_display.dart' show transactionColor;
 /// Opens the "create transaction" bottom sheet (Mục 12.5 / 12.5.1), with
 /// tabs Thu / Chi / Chuyển tiền / Công nợ. Returns `true` if a transaction
 /// was created, so callers can refresh their lists.
-Future<bool?> showCreateTransactionSheet(BuildContext context, {int initialTabIndex = 0}) {
+///
+/// Deep-link options for starting pre-filled:
+/// - [initialTabIndex]: which top tab to open on (0 Thu, 1 Chi, 2 Chuyển,
+///   3 Công nợ).
+/// - [debtSubTabIndex]: which Công nợ sub-tab when that tab is shown
+///   (0 Bán thiếu, 1 Trả nợ, 2 Mua chịu NCC, 3 Đã trả NCC).
+/// - [preselectedCustomer]/[preselectedSupplier]: pre-picks the customer or
+///   supplier in the Công nợ forms (used from the customer/supplier detail
+///   screens so the user doesn't have to re-pick the person they came from).
+/// - [expenseVaultId]/[expenseAmount]: pre-fills the Chi tab (used by the
+///   "Đã trả NCC" follow-up so the matching expense is quick to confirm).
+Future<bool?> showCreateTransactionSheet(
+  BuildContext context, {
+  int initialTabIndex = 0,
+  int debtSubTabIndex = 0,
+  Customer? preselectedCustomer,
+  Customer? preselectedSupplier,
+  String? expenseVaultId,
+  int? expenseAmount,
+}) {
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
@@ -31,14 +51,34 @@ Future<bool?> showCreateTransactionSheet(BuildContext context, {int initialTabIn
     // (see CreateTransactionSheet.build) instead of the modal route's flat
     // default — transparent here so that shows through cleanly.
     backgroundColor: Colors.transparent,
-    builder: (_) => CreateTransactionSheet(initialTabIndex: initialTabIndex),
+    builder: (_) => CreateTransactionSheet(
+      initialTabIndex: initialTabIndex,
+      debtSubTabIndex: debtSubTabIndex,
+      preselectedCustomer: preselectedCustomer,
+      preselectedSupplier: preselectedSupplier,
+      expenseVaultId: expenseVaultId,
+      expenseAmount: expenseAmount,
+    ),
   );
 }
 
 class CreateTransactionSheet extends ConsumerStatefulWidget {
   final int initialTabIndex;
+  final int debtSubTabIndex;
+  final Customer? preselectedCustomer;
+  final Customer? preselectedSupplier;
+  final String? expenseVaultId;
+  final int? expenseAmount;
 
-  const CreateTransactionSheet({super.key, this.initialTabIndex = 0});
+  const CreateTransactionSheet({
+    super.key,
+    this.initialTabIndex = 0,
+    this.debtSubTabIndex = 0,
+    this.preselectedCustomer,
+    this.preselectedSupplier,
+    this.expenseVaultId,
+    this.expenseAmount,
+  });
 
   @override
   ConsumerState<CreateTransactionSheet> createState() => _CreateTransactionSheetState();
@@ -47,6 +87,7 @@ class CreateTransactionSheet extends ConsumerStatefulWidget {
 class _CreateTransactionSheetState extends ConsumerState<CreateTransactionSheet>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  final ValueNotifier<bool> _dirty = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -60,8 +101,31 @@ class _CreateTransactionSheetState extends ConsumerState<CreateTransactionSheet>
 
   @override
   void dispose() {
+    _dirty.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Closes the sheet, but only after warning the user if any tab holds
+  /// typed/selected data they'd lose. Drives the X button, the system back
+  /// gesture and the barrier tap alike (all funnel through [PopScope]).
+  Future<void> _maybeClose() async {
+    if (!_dirty.value) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Đóng mà không lưu?'),
+        content: const Text('Dữ liệu bạn vừa nhập trên các thẻ (Thu/Chi/Chuyển/Công nợ) sẽ bị mất.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Ở lại chỉnh tiếp')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Đóng')),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) Navigator.of(context).pop();
   }
 
   static const _tabIcons = [Icons.arrow_upward, Icons.arrow_downward, Icons.swap_horiz, Icons.person_outline];
@@ -79,10 +143,16 @@ class _CreateTransactionSheetState extends ConsumerState<CreateTransactionSheet>
       transactionColor(TransactionType.debtIncrease, style),
     ];
     final currentAccent = tabColors[_tabController.index];
-    return Padding(
-      padding: EdgeInsets.only(bottom: mediaQuery.viewInsets.bottom),
-      child: SizedBox(
-        height: mediaQuery.size.height * 0.88,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _maybeClose();
+      },
+      child: Padding(
+        padding: EdgeInsets.only(bottom: mediaQuery.viewInsets.bottom),
+        child: SizedBox(
+          height: mediaQuery.size.height * 0.88,
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           child: Container(
@@ -107,7 +177,7 @@ class _CreateTransactionSheetState extends ConsumerState<CreateTransactionSheet>
                             Text('Thêm giao dịch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: n.textPrimary)),
                             IconButton(
                               icon: Icon(Icons.close, color: n.textSecondary),
-                              onPressed: () => Navigator.of(context).maybePop(),
+                              onPressed: _maybeClose,
                             ),
                           ],
                         ),
@@ -145,15 +215,25 @@ class _CreateTransactionSheetState extends ConsumerState<CreateTransactionSheet>
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
-                    children: const [
-                      IncomeTransactionForm(),
-                      ExpenseTransactionForm(),
-                      TransferTransactionForm(),
-                      DebtTransactionTab(),
+                    children: [
+                      IncomeTransactionForm(dirty: _dirty),
+                      ExpenseTransactionForm(
+                        dirty: _dirty,
+                        initialVaultId: widget.expenseVaultId,
+                        initialAmount: widget.expenseAmount,
+                      ),
+                      TransferTransactionForm(dirty: _dirty),
+                      DebtTransactionTab(
+                        dirty: _dirty,
+                        initialSubTabIndex: widget.debtSubTabIndex,
+                        preselectedCustomer: widget.preselectedCustomer,
+                        preselectedSupplier: widget.preselectedSupplier,
+                      ),
                     ],
                   ),
                 ),
               ],
+            ),
             ),
           ),
         ),
@@ -333,13 +413,16 @@ String? validateNote(String? value) {
 }
 
 class IncomeTransactionForm extends ConsumerStatefulWidget {
-  const IncomeTransactionForm({super.key});
+  final ValueNotifier<bool> dirty;
+
+  const IncomeTransactionForm({super.key, required this.dirty});
 
   @override
   ConsumerState<IncomeTransactionForm> createState() => _IncomeTransactionFormState();
 }
 
-class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
+class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm>
+    with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _costController = TextEditingController();
@@ -347,6 +430,19 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
   String? _toVaultId;
   String? _categoryId;
   bool _isSaving = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController.addListener(_markDirty);
+    _costController.addListener(_markDirty);
+    _noteController.addListener(_markDirty);
+  }
+
+  void _markDirty() => widget.dirty.value = true;
 
   @override
   void dispose() {
@@ -383,6 +479,7 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final accent = transactionColor(TransactionType.income, ref.watch(visualStyleProvider));
     return Form(
       key: _formKey,
@@ -392,13 +489,19 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
           VaultDropdownField(
             label: 'Tiền vào túi',
             value: _toVaultId,
-            onChanged: (v) => setState(() => _toVaultId = v),
+            onChanged: (v) => setState(() {
+              _toVaultId = v;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           CategoryDropdownField(
             group: 'income',
             value: _categoryId,
-            onChanged: (v) => setState(() => _categoryId = v),
+            onChanged: (v) => setState(() {
+              _categoryId = v;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController, accent: accent),
@@ -445,19 +548,45 @@ class _IncomeTransactionFormState extends ConsumerState<IncomeTransactionForm> {
 }
 
 class ExpenseTransactionForm extends ConsumerStatefulWidget {
-  const ExpenseTransactionForm({super.key});
+  final ValueNotifier<bool> dirty;
+  final String? initialVaultId;
+  final int? initialAmount;
+
+  const ExpenseTransactionForm({
+    super.key,
+    required this.dirty,
+    this.initialVaultId,
+    this.initialAmount,
+  });
 
   @override
   ConsumerState<ExpenseTransactionForm> createState() => _ExpenseTransactionFormState();
 }
 
-class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm> {
+class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
+    with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   String? _fromVaultId;
   String? _categoryId;
   bool _isSaving = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fromVaultId = widget.initialVaultId;
+    if (widget.initialAmount != null && widget.initialAmount! > 0) {
+      _amountController.text = formatVND(widget.initialAmount!).replaceAll('đ', '');
+    }
+    _amountController.addListener(_markDirty);
+    _noteController.addListener(_markDirty);
+  }
+
+  void _markDirty() => widget.dirty.value = true;
 
   @override
   void dispose() {
@@ -491,6 +620,7 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final accent = transactionColor(TransactionType.expense, ref.watch(visualStyleProvider));
     return Form(
       key: _formKey,
@@ -500,13 +630,19 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
           VaultDropdownField(
             label: 'Túi chi',
             value: _fromVaultId,
-            onChanged: (v) => setState(() => _fromVaultId = v),
+            onChanged: (v) => setState(() {
+              _fromVaultId = v;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           CategoryDropdownField(
             group: 'expense',
             value: _categoryId,
-            onChanged: (v) => setState(() => _categoryId = v),
+            onChanged: (v) => setState(() {
+              _categoryId = v;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController, accent: accent),
@@ -542,19 +678,34 @@ class _ExpenseTransactionFormState extends ConsumerState<ExpenseTransactionForm>
 }
 
 class TransferTransactionForm extends ConsumerStatefulWidget {
-  const TransferTransactionForm({super.key});
+  final ValueNotifier<bool> dirty;
+
+  const TransferTransactionForm({super.key, required this.dirty});
 
   @override
   ConsumerState<TransferTransactionForm> createState() => _TransferTransactionFormState();
 }
 
-class _TransferTransactionFormState extends ConsumerState<TransferTransactionForm> {
+class _TransferTransactionFormState extends ConsumerState<TransferTransactionForm>
+    with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   String? _fromVaultId;
   String? _toVaultId;
   bool _isSaving = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController.addListener(_markDirty);
+    _noteController.addListener(_markDirty);
+  }
+
+  void _markDirty() => widget.dirty.value = true;
 
   @override
   void dispose() {
@@ -592,6 +743,7 @@ class _TransferTransactionFormState extends ConsumerState<TransferTransactionFor
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final accent = transactionColor(TransactionType.transfer, ref.watch(visualStyleProvider));
     return Form(
       key: _formKey,
@@ -601,14 +753,20 @@ class _TransferTransactionFormState extends ConsumerState<TransferTransactionFor
           VaultDropdownField(
             label: 'Túi nguồn',
             value: _fromVaultId,
-            onChanged: (v) => setState(() => _fromVaultId = v),
+            onChanged: (v) => setState(() {
+              _fromVaultId = v;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           VaultDropdownField(
             label: 'Túi đích',
             value: _toVaultId,
             excludeVaultId: _fromVaultId,
-            onChanged: (v) => setState(() => _toVaultId = v),
+            onChanged: (v) => setState(() {
+              _toVaultId = v;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController, accent: accent),

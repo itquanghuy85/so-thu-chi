@@ -72,6 +72,11 @@ class NluTransactionResult {
   /// Ghi chú tóm tắt nội dung giao dịch.
   final String? note;
 
+  /// Ngày giao dịch do regex nhận diện ("hôm qua"/"hôm kia"). Chỉ regex
+  /// đường có field này — AI không phân tích ngày. Giao dịch vẫn được lưu
+  /// theo ngày hôm nay; UI dùng field này để cảnh báo thay vì bỏ im lặng.
+  final DateTime? transactionDate;
+
   /// 'ai' | 'regex' | 'cache' — giúp debug, hiển thị badge "AI" hay không.
   final String source;
 
@@ -82,6 +87,7 @@ class NluTransactionResult {
     this.categoryNameGuess,
     this.vaultNameGuess,
     this.note,
+    this.transactionDate,
     required this.source,
   });
 
@@ -92,6 +98,7 @@ class NluTransactionResult {
         categoryNameGuess: categoryNameGuess,
         vaultNameGuess: vaultNameGuess,
         note: note,
+        transactionDate: transactionDate,
         source: source ?? this.source,
       );
 }
@@ -415,7 +422,8 @@ Quy tắc:
       amount: r.amount,
       vaultNameGuess: r.vaultNameGuess,
       categoryNameGuess: r.categoryNameGuess,
-      note: null,
+      note: r.note,
+      transactionDate: r.transactionDate,
       source: 'regex',
     );
   }

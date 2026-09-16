@@ -52,6 +52,15 @@ export class RecurringService {
       throw new AppException('NOT_FOUND', 'Không tìm thấy giao dịch định kỳ');
     }
     if (dto.active !== undefined) recurring.active = dto.active;
+    if (dto.type !== undefined) recurring.type = dto.type;
+    if (dto.amount !== undefined) recurring.amount = dto.amount;
+    if (dto.category_id !== undefined) recurring.categoryId = dto.category_id;
+    if (dto.from_vault_id !== undefined) recurring.fromVaultId = dto.from_vault_id;
+    if (dto.to_vault_id !== undefined) recurring.toVaultId = dto.to_vault_id;
+    if (dto.customer_id !== undefined) recurring.customerId = dto.customer_id;
+    if (dto.note !== undefined) recurring.note = dto.note;
+    if (dto.frequency !== undefined) recurring.frequency = dto.frequency;
+    if (dto.start_date !== undefined) recurring.nextRunDate = new Date(dto.start_date);
     await this.recurringRepository.save(recurring);
     return this.getOne(workspaceId, recurring.id);
   }

@@ -133,6 +133,19 @@ class _RecurringTile extends ConsumerWidget {
               },
             ),
             IconButton(
+              tooltip: 'Sửa giao dịch định kỳ',
+              icon: Icon(Icons.edit_outlined, color: neutrals.textSecondary, size: 20),
+              onPressed: () async {
+                final updated = await showModalBottomSheet<bool>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => _RecurringFormSheet(existing: item),
+                );
+                if (updated == true) ref.invalidate(recurringListProvider);
+              },
+            ),
+            IconButton(
               icon: Icon(Icons.delete_outline, color: neutrals.textSecondary, size: 20),
               onPressed: () async {
                 final confirmed = await showDialog<bool>(
@@ -160,7 +173,9 @@ class _RecurringTile extends ConsumerWidget {
 }
 
 class _RecurringFormSheet extends ConsumerStatefulWidget {
-  const _RecurringFormSheet();
+  final RecurringTransaction? existing;
+
+  const _RecurringFormSheet({this.existing});
 
   @override
   ConsumerState<_RecurringFormSheet> createState() => _RecurringFormSheetState();
@@ -168,11 +183,13 @@ class _RecurringFormSheet extends ConsumerStatefulWidget {
 
 class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _amountController = TextEditingController();
-  final _noteController = TextEditingController();
-  TransactionType _type = TransactionType.expense;
-  RecurringFrequency _frequency = RecurringFrequency.monthly;
-  DateTime _startDate = DateTime.now();
+  late final _amountController = TextEditingController(
+    text: widget.existing != null ? formatVND(widget.existing!.amount).replaceAll('đ', '') : '',
+  );
+  late final _noteController = TextEditingController(text: widget.existing?.note ?? '');
+  late TransactionType _type = widget.existing?.type ?? TransactionType.expense;
+  late RecurringFrequency _frequency = widget.existing?.frequency ?? RecurringFrequency.monthly;
+  late DateTime _startDate = widget.existing?.nextRunDate ?? DateTime.now();
   String? _vaultId;
   String? _toVaultId;
   String? _categoryId;
@@ -180,11 +197,27 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    if (e != null) {
+      _vaultId = e.fromVault?.id;
+      _toVaultId = e.toVault?.id;
+      _categoryId = e.category?.id;
+      if (e.customer != null) {
+        _customer = Customer(id: e.customer!.id, name: e.customer!.name, debtBalance: 0);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
     super.dispose();
   }
+
+  bool get _isEditing => widget.existing != null;
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -204,21 +237,38 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
     setState(() => _saving = true);
     try {
       final workspaceId = ref.read(currentWorkspaceIdProvider);
-      await ref.read(recurringRepositoryProvider).create(
-            workspaceId: workspaceId,
-            type: transactionTypeToString(_type),
-            amount: parseCurrencyInput(_amountController.text),
-            categoryId: _categoryId,
-            fromVaultId: (_type == TransactionType.expense || _type == TransactionType.transfer) ? _vaultId : null,
-            toVaultId: (_type == TransactionType.income || _type == TransactionType.transfer || _type == TransactionType.debtDecrease) ? _toVaultId : null,
-            customerId: _customer?.id,
-            note: _noteController.text.trim(),
-            frequency: frequencyToString(_frequency),
-            startDate: _startDate,
-          );
+      final existingId = widget.existing?.id;
+      if (existingId != null) {
+        await ref.read(recurringRepositoryProvider).update(
+              workspaceId: workspaceId,
+              id: existingId,
+              type: transactionTypeToString(_type),
+              amount: parseCurrencyInput(_amountController.text),
+              categoryId: _categoryId,
+              fromVaultId: (_type == TransactionType.expense || _type == TransactionType.transfer) ? _vaultId : null,
+              toVaultId: (_type == TransactionType.income || _type == TransactionType.transfer || _type == TransactionType.debtDecrease) ? _toVaultId : null,
+              customerId: _customer?.id,
+              note: _noteController.text.trim(),
+              frequency: frequencyToString(_frequency),
+              startDate: _startDate,
+            );
+      } else {
+        await ref.read(recurringRepositoryProvider).create(
+              workspaceId: workspaceId,
+              type: transactionTypeToString(_type),
+              amount: parseCurrencyInput(_amountController.text),
+              categoryId: _categoryId,
+              fromVaultId: (_type == TransactionType.expense || _type == TransactionType.transfer) ? _vaultId : null,
+              toVaultId: (_type == TransactionType.income || _type == TransactionType.transfer || _type == TransactionType.debtDecrease) ? _toVaultId : null,
+              customerId: _customer?.id,
+              note: _noteController.text.trim(),
+              frequency: frequencyToString(_frequency),
+              startDate: _startDate,
+            );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      final message = e is ApiException ? e.message : 'Không thể tạo giao dịch định kỳ';
+      final message = e is ApiException ? e.message : _isEditing ? 'Không thể sửa giao dịch định kỳ' : 'Không thể tạo giao dịch định kỳ';
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -235,9 +285,9 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
           children: [
             const SizedBox(height: 8),
             const Center(child: SheetDragHandle()),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('Thêm giao dịch định kỳ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(widget.existing == null ? 'Thêm giao dịch định kỳ' : 'Sửa giao dịch định kỳ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ),
             const Divider(height: 1),
             Expanded(

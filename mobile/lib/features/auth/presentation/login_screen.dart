@@ -114,7 +114,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       validator: _validatePassword,
                     ),
-                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => context.push('/forgot-password'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          minimumSize: const Size(0, 32),
+                          textStyle: const TextStyle(fontSize: 13),
+                        ),
+                        child: Text('Quên mật khẩu?', style: TextStyle(color: accent, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     AuthPrimaryButton(label: 'Đăng nhập', loading: _isSubmitting, onPressed: _submit),
                     const SizedBox(height: 14),
                     Center(

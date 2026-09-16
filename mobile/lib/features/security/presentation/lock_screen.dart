@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../auth/presentation/auth_notifier.dart';
 import '../data/app_lock_service.dart';
 import 'app_lock_notifier.dart';
 
@@ -20,11 +23,58 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   String? _error;
   bool _biometricAvailable = false;
   bool _biometricTried = false;
+  DateTime? _lockoutUntil;
+  int _lockoutRemaining = 0;
+  bool _loggingOut = false;
+  Timer? _lockoutTimer;
 
   @override
   void initState() {
     super.initState();
     _checkBiometric();
+    _restoreLockoutState();
+  }
+
+  @override
+  void dispose() {
+    _lockoutTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Picks up a pending lockout (persisted in secure storage) when the
+  /// lock screen is re-shown, so a restart can't bypass the freeze.
+  Future<void> _restoreLockoutState() async {
+    final until = await ref.read(appLockServiceProvider).pinLockoutUntil();
+    if (!mounted) return;
+    if (until != null && DateTime.now().isBefore(until)) {
+      _lockoutUntil = until;
+      _tickLockout();
+    }
+  }
+
+  void _enterLockout(DateTime until) {
+    _lockoutUntil = until;
+    _lockoutTimer?.cancel();
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tickLockout());
+    _tickLockout();
+    setState(() {
+      _error = 'Quá nhiều lần nhập sai. Khoá tạm thời.';
+      _entered = '';
+    });
+  }
+
+  void _tickLockout() {
+    final until = _lockoutUntil;
+    if (until == null) return;
+    final remaining = until.difference(DateTime.now()).inSeconds;
+    if (!mounted) return;
+    setState(() {
+      _lockoutRemaining = remaining < 0 ? 0 : remaining;
+      if (remaining <= 0) {
+        _lockoutUntil = null;
+        _lockoutTimer?.cancel();
+      }
+    });
   }
 
   Future<void> _checkBiometric() async {
@@ -44,21 +94,73 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   }
 
   Future<void> _onDigit(String digit) async {
+    if (_lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!)) {
+      setState(() {
+        _error = _lockoutRemaining > 0 ? 'Thử lại sau $_lockoutRemaining giây' : 'Khoá tạm thời';
+      });
+      return;
+    }
     if (_entered.length >= 6) return;
     setState(() {
       _entered += digit;
       _error = null;
     });
     if (_entered.length == 6) {
-      final ok = await ref.read(appLockServiceProvider).verifyPin(_entered);
+      final service = ref.read(appLockServiceProvider);
+      final ok = await service.verifyPin(_entered);
       if (ok) {
+        await service.resetFailedPinAttempts();
         ref.read(appLockNotifierProvider.notifier).unlock();
       } else {
-        setState(() {
-          _error = 'Sai mã PIN';
-          _entered = '';
-        });
+        await service.registerFailedPinAttempt();
+        final lockoutSync = await service.pinLockoutUntil();
+        if (mounted) {
+          if (lockoutSync != null && DateTime.now().isBefore(lockoutSync)) {
+            _enterLockout(lockoutSync);
+          } else {
+            final remaining = AppLockService.maxPinAttempts - await service.failedPinAttempts();
+            setState(() {
+              _error = remaining > 0 ? 'Sai mã PIN. Còn $remaining lần thử.' : 'Sai mã PIN';
+              _entered = '';
+            });
+          }
+        }
       }
+    }
+  }
+
+  Future<void> _onLogout() async {
+    final service = ref.read(appLockServiceProvider);
+    final action = await showDialog<_LogoutAction>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Đăng xuất'),
+        content: const Text(
+          'Quên mã PIN?\n\nĐăng xuất sẽ đưa bạn về màn hình đăng nhập. Khi đăng nhập lại, mã PIN trên thiết bị này sẽ được xoá và bạn có thể thiết lập mã mới.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Huỷ')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_LogoutAction.logoutOnly),
+            child: const Text('Đăng xuất'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(_LogoutAction.forgotPin),
+            child: const Text('Quên PIN, đặt lại'),
+          ),
+        ],
+      ),
+    );
+    if (action == null || !mounted) return;
+    if (action == _LogoutAction.forgotPin) {
+      await service.clearPin();
+      await ref.read(appLockNotifierProvider.notifier).refreshPinConfigured();
+    }
+    await service.resetFailedPinAttempts();
+    await ref.read(authNotifierProvider.notifier).logout();
+    if (mounted) {
+      setState(() => _loggingOut = true);
+      ref.read(appLockNotifierProvider.notifier).unlock();
     }
   }
 
@@ -85,7 +187,10 @@ class _LockScreenState extends ConsumerState<LockScreen> {
             const Text('Nhập mã PIN', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              _error ?? ' ',
+              _lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!)
+                  ? 'Khoá tạm thời. Thử lại sau $_lockoutRemaining giây'
+                  : (_error ?? ' '),
+              textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 13),
             ),
             const SizedBox(height: 12),
@@ -153,6 +258,13 @@ class _LockScreenState extends ConsumerState<LockScreen> {
               ),
             ),
             const Spacer(),
+            TextButton(
+              onPressed: _loggingOut ? null : _onLogout,
+              style: TextButton.styleFrom(foregroundColor: Colors.white70, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+              child: _loggingOut
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70))
+                  : const Text('Quên mã PIN? Đăng xuất'),
+            ),
           ],
         ),
       ),
@@ -181,3 +293,5 @@ class _DigitButton extends StatelessWidget {
     );
   }
 }
+
+enum _LogoutAction { logoutOnly, forgotPin }

@@ -4,6 +4,7 @@ import { DataSource, Not, Repository } from 'typeorm';
 import { Vault } from './entities/vault.entity';
 import { TransactionEntry } from '../transactions/entities/transaction-entry.entity';
 import { CreateVaultDto } from './dto/create-vault.dto';
+import { UpdateVaultDto } from './dto/update-vault.dto';
 import { ReconcileVaultDto } from './dto/reconcile-vault.dto';
 import { AppException } from '../../common/exceptions/app.exception';
 import { assertWorkspaceMember } from '../../common/utils/workspace-access.util';
@@ -59,6 +60,24 @@ export class VaultsService {
       vault: { id: vault.id, name: vault.name, type: vault.type, current_balance: vault.currentBalance },
       difference,
     };
+  }
+
+  /// Rename and/or change the type of a (non-virtual) vault. Same access
+  /// model as reconcile/remove: membership is checked after resolving the
+  /// vault's workspace.
+  async update(vaultId: string, userId: string, dto: UpdateVaultDto) {
+    const vault = await this.vaultsRepository.findOne({ where: { id: vaultId } });
+    if (!vault) {
+      throw new AppException('NOT_FOUND', 'Không tìm thấy quỹ');
+    }
+    await assertWorkspaceMember(this.dataSource, vault.workspaceId, userId);
+    if (vault.type === 'virtual') {
+      throw new AppException('VALIDATION_ERROR', 'Không thể sửa quỹ hệ thống');
+    }
+    if (dto.name !== undefined) vault.name = dto.name;
+    if (dto.type !== undefined) vault.type = dto.type;
+    await this.vaultsRepository.save(vault);
+    return { id: vault.id, name: vault.name, type: vault.type, current_balance: vault.currentBalance };
   }
 
   /// "Xóa túi tiền" — blocked if it has ever appeared in a transaction

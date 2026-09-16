@@ -128,7 +128,7 @@ class ReportsOverviewScreen extends ConsumerWidget {
                 ),
                 _ReportTile(
                   title: 'Công nợ',
-                  subtitle: 'Phải thu, quá hạn',
+                  subtitle: 'Phải thu, phải trả',
                   icon: Icons.receipt_long,
                   gradient: AppColors.reportDebt,
                   onTap: () => context.go('/debt'),
@@ -176,8 +176,21 @@ class ReportsOverviewScreen extends ConsumerWidget {
                   SizedBox(
                     height: 140,
                     child: monthReportAsync.when(
-                      loading: () => const SizedBox.shrink(),
-                      error: (error, _) => const SizedBox.shrink(),
+                      loading: () => Center(
+                        child: SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: n.isGame ? accent : null)),
+                      ),
+                      error: (error, _) => Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Không thể tải dòng tiền', style: TextStyle(fontSize: 12, color: n.textSecondary)),
+                            TextButton(
+                              onPressed: () => ref.invalidate(cashflowDetailProvider(ReportPeriod.month)),
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
+                        ),
+                      ),
                       data: (data) => _MiniNetLineChart(buckets: data.buckets, neutrals: n, accent: accent),
                     ),
                   ),

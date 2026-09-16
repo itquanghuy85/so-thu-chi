@@ -138,7 +138,12 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 return Center(child: CircularProgressIndicator(color: n.isGame ? accent : null));
               }
               if (state.errorMessage != null && state.items.isEmpty) {
-                return Center(child: Text(state.errorMessage!, style: TextStyle(color: n.textPrimary)));
+                return EmptyStateWidget(
+                  message: state.errorMessage!,
+                  icon: Icons.cloud_off_outlined,
+                  accent: accent,
+                  action: TextButton(onPressed: () => notifier.loadFirstPage(), child: const Text('Thử lại')),
+                );
               }
               if (state.items.isEmpty) {
                 return EmptyStateWidget(
@@ -501,10 +506,17 @@ void showTransactionDetailSheet(BuildContext context, WidgetRef ref, Transaction
                       icon: const Icon(Icons.edit_outlined),
                       label: const Text('Sửa giao dịch'),
                       onPressed: () async {
-                        final updated = await showEditTransactionSheet(sheetContext, transaction);
-                        if (updated != null) {
-                          ref.read(transactionListProvider.notifier).loadFirstPage();
-                          if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                        try {
+                          final updated = await showEditTransactionSheet(sheetContext, transaction);
+                          if (updated != null) {
+                            ref.read(transactionListProvider.notifier).loadFirstPage();
+                            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                          }
+                        } catch (e) {
+                          final message = e is ApiException ? e.message : 'Không thể sửa giao dịch';
+                          if (sheetContext.mounted) {
+                            ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content: Text(message)));
+                          }
                         }
                       },
                     ),

@@ -265,6 +265,9 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
   bool _parsed = false;
   /// 'ai' | 'regex' | 'cache' — hiển thị badge nguồn phân tích
   String _parseSource = 'regex';
+  /// Ngày giao dịch do regex nhận diện ("hôm qua"/"hôm kia"), để cảnh báo
+  /// cho người dùng rằng hệ thống vẫn lưu theo ngày hôm nay.
+  DateTime? _statedDate;
 
   @override
   void dispose() {
@@ -320,7 +323,8 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
 
     setState(() {
       _parseSource = nluResult.source;
-      _intent = nluResult.intent == VoiceIntent.unknown ? VoiceIntent.income : nluResult.intent;
+      _intent = nluResult.intent;
+      _statedDate = nluResult.transactionDate;
       if (nluResult.amount != null) _amountController.text = NumberFormatUtil.grouped(nluResult.amount!);
       if (matchedVault.isNotEmpty) _vaultId = matchedVault.first.id;
       if (resolvedCategoryId != null) _categoryId = resolvedCategoryId;
@@ -337,6 +341,9 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
     final workspaceId = ref.read(currentWorkspaceIdProvider);
     setState(() => _isSaving = true);
     try {
+      if (_intent == VoiceIntent.unknown) {
+        throw const _MissingFieldException('Vui lòng chọn loại giao dịch');
+      }
       final repo = ref.read(transactionRepositoryProvider);
       switch (_intent) {
         case VoiceIntent.income:
@@ -384,6 +391,8 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+
     return Form(
       key: _formKey,
       child: ListView(
@@ -404,7 +413,30 @@ class _ConfirmationFormState extends ConsumerState<_ConfirmationForm> {
             ),
           ),
           const SizedBox(height: 16),
+          if (_statedDate != null && _statedDate!.isBefore(today)) ...[
+            const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, size: 16, color: AppColors.textSecondary),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Bạn nói giao dịch ở thời điểm trong quá khứ — hệ thống sẽ lưu theo ngày hôm nay (chưa hỗ trợ ghi ngày quá khứ).',
+                    style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           const Text('Loại giao dịch', style: TextStyle(fontWeight: FontWeight.w600)),
+          if (_intent == VoiceIntent.unknown) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'Chưa nhận diện được loại giao dịch — vui lòng chọn bên dưới.',
+              style: TextStyle(color: AppColors.expense, fontSize: 12.5),
+            ),
+          ],
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,

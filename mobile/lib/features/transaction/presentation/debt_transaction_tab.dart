@@ -13,14 +13,25 @@ import '../../debt/domain/customer.dart';
 import '../../debt/presentation/create_customer_sheet.dart';
 import '../../debt/presentation/create_supplier_sheet.dart';
 import '../data/transaction_repository.dart';
-import 'create_transaction_sheet.dart' show VaultDropdownField, validateNote;
+import 'create_transaction_sheet.dart' show VaultDropdownField, validateNote, showCreateTransactionSheet;
 
 const _supplierColor = Color(0xFFE65100);
 
 /// Tab "Công nợ" trong sheet tạo giao dịch với 4 sub-tabs:
 /// Bán thiếu / Trả nợ (phải thu) và Mua chịu NCC / Đã trả NCC (phải trả).
 class DebtTransactionTab extends StatefulWidget {
-  const DebtTransactionTab({super.key});
+  final ValueNotifier<bool> dirty;
+  final int initialSubTabIndex;
+  final Customer? preselectedCustomer;
+  final Customer? preselectedSupplier;
+
+  const DebtTransactionTab({
+    super.key,
+    required this.dirty,
+    this.initialSubTabIndex = 0,
+    this.preselectedCustomer,
+    this.preselectedSupplier,
+  });
 
   @override
   State<DebtTransactionTab> createState() => _DebtTransactionTabState();
@@ -32,7 +43,7 @@ class _DebtTransactionTabState extends State<DebtTransactionTab> with SingleTick
   @override
   void initState() {
     super.initState();
-    _subTabController = TabController(length: 4, vsync: this);
+    _subTabController = TabController(length: 4, vsync: this, initialIndex: widget.initialSubTabIndex);
   }
 
   @override
@@ -61,11 +72,11 @@ class _DebtTransactionTabState extends State<DebtTransactionTab> with SingleTick
         Expanded(
           child: TabBarView(
             controller: _subTabController,
-            children: const [
-              _BanThieuForm(),
-              _TraNoForm(),
-              _MuaChieuNccForm(),
-              _DaTraNccForm(),
+            children: [
+              _BanThieuForm(dirty: widget.dirty, initialCustomer: widget.preselectedCustomer),
+              _TraNoForm(dirty: widget.dirty, initialCustomer: widget.preselectedCustomer),
+              _MuaChieuNccForm(dirty: widget.dirty, initialSupplier: widget.preselectedSupplier),
+              _DaTraNccForm(dirty: widget.dirty, initialSupplier: widget.preselectedSupplier),
             ],
           ),
         ),
@@ -138,18 +149,35 @@ class CustomerDropdownField extends ConsumerWidget {
 }
 
 class _BanThieuForm extends ConsumerStatefulWidget {
-  const _BanThieuForm();
+  final ValueNotifier<bool> dirty;
+  final Customer? initialCustomer;
+
+  const _BanThieuForm({required this.dirty, this.initialCustomer});
 
   @override
   ConsumerState<_BanThieuForm> createState() => _BanThieuFormState();
 }
 
-class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
+class _BanThieuFormState extends ConsumerState<_BanThieuForm>
+    with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   Customer? _customer;
   bool _isSaving = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _customer = widget.initialCustomer;
+    _amountController.addListener(_markDirty);
+    _noteController.addListener(_markDirty);
+  }
+
+  void _markDirty() => widget.dirty.value = true;
 
   @override
   void dispose() {
@@ -182,6 +210,7 @@ class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Form(
       key: _formKey,
       child: ListView(
@@ -189,7 +218,10 @@ class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
         children: [
           CustomerDropdownField(
             value: _customer?.id,
-            onSelected: (c) => setState(() => _customer = c),
+            onSelected: (c) => setState(() {
+              _customer = c;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController, accent: AppColors.debt),
@@ -224,18 +256,34 @@ class _BanThieuFormState extends ConsumerState<_BanThieuForm> {
 }
 
 class _TraNoForm extends ConsumerStatefulWidget {
-  const _TraNoForm();
+  final ValueNotifier<bool> dirty;
+  final Customer? initialCustomer;
+
+  const _TraNoForm({required this.dirty, this.initialCustomer});
 
   @override
   ConsumerState<_TraNoForm> createState() => _TraNoFormState();
 }
 
-class _TraNoFormState extends ConsumerState<_TraNoForm> {
+class _TraNoFormState extends ConsumerState<_TraNoForm>
+    with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   Customer? _customer;
   String? _toVaultId;
   bool _isSaving = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _customer = widget.initialCustomer;
+    _amountController.addListener(_markDirty);
+  }
+
+  void _markDirty() => widget.dirty.value = true;
 
   @override
   void dispose() {
@@ -272,6 +320,7 @@ class _TraNoFormState extends ConsumerState<_TraNoForm> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Form(
       key: _formKey,
       child: ListView(
@@ -279,7 +328,10 @@ class _TraNoFormState extends ConsumerState<_TraNoForm> {
         children: [
           CustomerDropdownField(
             value: _customer?.id,
-            onSelected: (c) => setState(() => _customer = c),
+            onSelected: (c) => setState(() {
+              _customer = c;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           AmountTextField(
@@ -294,7 +346,10 @@ class _TraNoFormState extends ConsumerState<_TraNoForm> {
           VaultDropdownField(
             label: 'Túi nhận tiền',
             value: _toVaultId,
-            onChanged: (v) => setState(() => _toVaultId = v),
+            onChanged: (v) => setState(() {
+              _toVaultId = v;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 20),
           FilledButton(
@@ -383,18 +438,35 @@ class SupplierDropdownField extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _MuaChieuNccForm extends ConsumerStatefulWidget {
-  const _MuaChieuNccForm();
+  final ValueNotifier<bool> dirty;
+  final Customer? initialSupplier;
+
+  const _MuaChieuNccForm({required this.dirty, this.initialSupplier});
 
   @override
   ConsumerState<_MuaChieuNccForm> createState() => _MuaChieuNccFormState();
 }
 
-class _MuaChieuNccFormState extends ConsumerState<_MuaChieuNccForm> {
+class _MuaChieuNccFormState extends ConsumerState<_MuaChieuNccForm>
+    with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   Customer? _supplier;
   bool _isSaving = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _supplier = widget.initialSupplier;
+    _amountController.addListener(_markDirty);
+    _noteController.addListener(_markDirty);
+  }
+
+  void _markDirty() => widget.dirty.value = true;
 
   @override
   void dispose() {
@@ -427,6 +499,7 @@ class _MuaChieuNccFormState extends ConsumerState<_MuaChieuNccForm> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Form(
       key: _formKey,
       child: ListView(
@@ -454,7 +527,10 @@ class _MuaChieuNccFormState extends ConsumerState<_MuaChieuNccForm> {
           const SizedBox(height: 12),
           SupplierDropdownField(
             value: _supplier?.id,
-            onSelected: (s) => setState(() => _supplier = s),
+            onSelected: (s) => setState(() {
+              _supplier = s;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           AmountTextField(controller: _amountController, accent: _supplierColor),
@@ -495,18 +571,34 @@ class _MuaChieuNccFormState extends ConsumerState<_MuaChieuNccForm> {
 // ---------------------------------------------------------------------------
 
 class _DaTraNccForm extends ConsumerStatefulWidget {
-  const _DaTraNccForm();
+  final ValueNotifier<bool> dirty;
+  final Customer? initialSupplier;
+
+  const _DaTraNccForm({required this.dirty, this.initialSupplier});
 
   @override
   ConsumerState<_DaTraNccForm> createState() => _DaTraNccFormState();
 }
 
-class _DaTraNccFormState extends ConsumerState<_DaTraNccForm> {
+class _DaTraNccFormState extends ConsumerState<_DaTraNccForm>
+    with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   Customer? _supplier;
   String? _toVaultId;
   bool _isSaving = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _supplier = widget.initialSupplier;
+    _amountController.addListener(_markDirty);
+  }
+
+  void _markDirty() => widget.dirty.value = true;
 
   @override
   void dispose() {
@@ -533,17 +625,28 @@ class _DaTraNccFormState extends ConsumerState<_DaTraNccForm> {
           );
       ref.invalidate(supplierListProvider);
       if (mounted) {
-        Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        final navigator = Navigator.of(context);
+        final amount = parseCurrencyInput(_amountController.text);
+        final vaultId = _toVaultId;
+        messenger.showSnackBar(
           SnackBar(
-            content: const Text('Đã ghi nhận. Để trừ số dư túi tiền, tạo thêm giao dịch Chi tương ứng.'),
-            duration: const Duration(seconds: 5),
+            content: const Text('Đã ghi nhận. Để trừ số dư túi tiền, tạo giao dịch Chi tương ứng.'),
+            duration: const Duration(seconds: 6),
             action: SnackBarAction(
               label: 'Tạo Chi',
-              onPressed: () {},
+              onPressed: () {
+                showCreateTransactionSheet(
+                  navigator.context,
+                  initialTabIndex: 1,
+                  expenseVaultId: vaultId,
+                  expenseAmount: amount,
+                );
+              },
             ),
           ),
         );
+        navigator.pop(true);
       }
     } catch (e) {
       final message = e is ApiException ? e.message : 'Không thể lưu giao dịch';
@@ -555,6 +658,7 @@ class _DaTraNccFormState extends ConsumerState<_DaTraNccForm> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Form(
       key: _formKey,
       child: ListView(
@@ -583,7 +687,10 @@ class _DaTraNccFormState extends ConsumerState<_DaTraNccForm> {
           const SizedBox(height: 12),
           SupplierDropdownField(
             value: _supplier?.id,
-            onSelected: (s) => setState(() => _supplier = s),
+            onSelected: (s) => setState(() {
+              _supplier = s;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 12),
           AmountTextField(
@@ -598,7 +705,10 @@ class _DaTraNccFormState extends ConsumerState<_DaTraNccForm> {
           VaultDropdownField(
             label: 'Ghi nhận từ túi tiền',
             value: _toVaultId,
-            onChanged: (v) => setState(() => _toVaultId = v),
+            onChanged: (v) => setState(() {
+              _toVaultId = v;
+              widget.dirty.value = true;
+            }),
           ),
           const SizedBox(height: 20),
           FilledButton(

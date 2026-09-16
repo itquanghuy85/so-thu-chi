@@ -91,8 +91,25 @@ class CustomerDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             historyAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (error, _) => const SizedBox.shrink(),
+              loading: () => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: n.isGame ? accent : null)),
+                ),
+              ),
+              error: (error, _) => Container(
+                padding: const EdgeInsets.all(16),
+                decoration: n.cardDecoration(radius: 16),
+                child: Row(
+                  children: [
+                    Expanded(child: Text('Không thể tải thông tin khách hàng', style: TextStyle(color: n.textSecondary))),
+                    TextButton(
+                      onPressed: () => ref.invalidate(_debtHistoryProvider(customer.id)),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
               data: (entries) {
                 final totalBought = entries.where((e) => e.type == 'debt_increase').fold<num>(0, (s, e) => s + e.amount);
                 final totalPaid = entries.where((e) => e.type == 'debt_decrease').fold<num>(0, (s, e) => s + e.amount);
@@ -150,7 +167,12 @@ class CustomerDetailScreen extends ConsumerWidget {
                   label: const Text('Tạo đơn bán thiếu'),
                   style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), foregroundColor: accent),
                   onPressed: () async {
-                    final created = await showCreateTransactionSheet(context, initialTabIndex: 3);
+                    final created = await showCreateTransactionSheet(
+                      context,
+                      initialTabIndex: 3,
+                      debtSubTabIndex: 0,
+                      preselectedCustomer: customer,
+                    );
                     if (created == true) {
                       ref.invalidate(_debtHistoryProvider(customer.id));
                       ref.invalidate(customerListProvider);
@@ -165,7 +187,12 @@ class CustomerDetailScreen extends ConsumerWidget {
                   label: const Text('Ghi nhận trả nợ'),
                   style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), backgroundColor: AppColors.income),
                   onPressed: () async {
-                    final created = await showCreateTransactionSheet(context, initialTabIndex: 3);
+                    final created = await showCreateTransactionSheet(
+                      context,
+                      initialTabIndex: 3,
+                      debtSubTabIndex: 1,
+                      preselectedCustomer: customer,
+                    );
                     if (created == true) {
                       ref.invalidate(_debtHistoryProvider(customer.id));
                       ref.invalidate(customerListProvider);

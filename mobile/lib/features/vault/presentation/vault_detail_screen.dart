@@ -101,8 +101,21 @@ class VaultDetailScreen extends ConsumerWidget {
                   SizedBox(
                     height: 130,
                     child: transactionsAsync.when(
-                      loading: () => const SizedBox.shrink(),
-                      error: (error, _) => const SizedBox.shrink(),
+                      loading: () => Center(
+                        child: SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: n.isGame ? accent : null)),
+                      ),
+                      error: (error, _) => Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Không thể tải biến động', style: TextStyle(fontSize: 12, color: n.textSecondary)),
+                            TextButton(
+                              onPressed: () => ref.invalidate(_vaultTransactionsProvider(vault.id)),
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
+                        ),
+                      ),
                       data: (transactions) => _BalanceTrendChart(vault: vault, transactions: transactions, color: color, neutrals: n),
                     ),
                   ),

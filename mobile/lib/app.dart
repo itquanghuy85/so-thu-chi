@@ -8,6 +8,7 @@ import 'core/constants/game_colors.dart';
 import 'core/theme/visual_style_provider.dart';
 import 'features/ai_chat/presentation/ai_chat_screen.dart';
 import 'features/auth/presentation/auth_notifier.dart';
+import 'features/auth/presentation/forgot_password_screen.dart';
 import 'features/daily_closing/presentation/daily_closing_screen.dart';
 import 'features/shift/presentation/shift_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
@@ -50,7 +51,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final workspaceState = ref.read(workspaceNotifierProvider);
       final location = state.matchedLocation;
 
-      const authRoutes = {'/login', '/register'};
+      const authRoutes = {'/login', '/register', '/forgot-password'};
 
       if (authState.status == AuthStatus.unknown) {
         return location == '/splash' ? null : '/splash';
@@ -88,6 +89,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(path: '/forgot-password', builder: (context, state) => const ForgotPasswordScreen()),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       GoRoute(path: '/workspaces', builder: (context, state) => const WorkspacePickerScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),

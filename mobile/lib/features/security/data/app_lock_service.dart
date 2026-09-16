@@ -78,11 +78,50 @@ class AppLockService {
     await _secureStorage.delete(key: SecureStorageKeys.biometricEnabled);
     await _secureStorage.delete(key: SecureStorageKeys.syncedPinHash);
     await _secureStorage.delete(key: SecureStorageKeys.syncedHasPin);
+    await resetFailedPinAttempts();
     try {
       await _authRepository.clearPin();
     } catch (_) {
       // best-effort — see setPin's doc comment
     }
+  }
+
+  /// Bruteforce guard for the lock screen (Mục 14): after
+  /// [maxPinAttempts] wrong entries the PIN pad is frozen for
+  /// [pinLockoutDuration]. Count and lockout timestamp are persisted in
+  /// secure storage so a restart doesn't reset the lockout.
+  static const int maxPinAttempts = 5;
+  static const Duration pinLockoutDuration = Duration(seconds: 30);
+
+  Future<int> failedPinAttempts() async {
+    final raw = await _secureStorage.read(key: SecureStorageKeys.failedPinAttempts);
+    return int.tryParse(raw ?? '') ?? 0;
+  }
+
+  /// When the PIN pad is currently locked out; `null` if not locked out.
+  Future<DateTime?> pinLockoutUntil() async {
+    final raw = await _secureStorage.read(key: SecureStorageKeys.pinLockoutUntil);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  /// Records one more wrong entry; starts the [pinLockoutDuration] freeze
+  /// (and resets the counter) once [maxPinAttempts] is reached.
+  Future<void> registerFailedPinAttempt() async {
+    final attempts = await failedPinAttempts() + 1;
+    if (attempts >= maxPinAttempts) {
+      await _secureStorage.write(
+        key: SecureStorageKeys.pinLockoutUntil,
+        value: DateTime.now().add(pinLockoutDuration).toIso8601String(),
+      );
+      await _secureStorage.write(key: SecureStorageKeys.failedPinAttempts, value: '0');
+    } else {
+      await _secureStorage.write(key: SecureStorageKeys.failedPinAttempts, value: '$attempts');
+    }
+  }
+
+  Future<void> resetFailedPinAttempts() async {
+    await _secureStorage.delete(key: SecureStorageKeys.failedPinAttempts);
+    await _secureStorage.delete(key: SecureStorageKeys.pinLockoutUntil);
   }
 
   /// Fetches the account's current PIN status from the server and caches

@@ -48,13 +48,26 @@ class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingOb
     final authStatus = ref.watch(authNotifierProvider).status;
     final lockState = ref.watch(appLockNotifierProvider);
 
-    // Arm the lock exactly once per cold-start session, right after the
-    // user is confirmed authenticated (covers "app relaunched from
-    // scratch with a PIN already set" — not just backgrounding). Also
-    // syncs this account's PIN status from the server first, so a device
-    // that hasn't set its own PIN yet still locks if another device on the
-    // same account already has one configured (Mục — "hai máy cùng đăng
-    // nhập 1 tài khoản").
+    // Re-arm the lock on every fresh login, not just cold-start: while no
+    // one is logged in we drop the one-shot flag (and clear any stale
+    // locked state) so the next authenticated session locks again instead
+    // of booting straight in unlocked (Mục 14).
+    if (authStatus != AuthStatus.authenticated) {
+      _lockedOnce = false;
+      if (lockState.locked) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(appLockNotifierProvider.notifier).unlock();
+        });
+      }
+    }
+
+    // Arm the lock exactly once per session, right after the user is
+    // confirmed authenticated (covers "app relaunched from scratch with a
+    // PIN already set" — not just backgrounding, and re-login in the same
+    // run). Also syncs this account's PIN status from the server first, so
+    // a device that hasn't set its own PIN yet still locks if another
+    // device on the same account already has one configured (Mục — "hai
+    // máy cùng đăng nhập 1 tài khoản").
     if (authStatus == AuthStatus.authenticated && !_lockedOnce) {
       _lockedOnce = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {

@@ -7,6 +7,7 @@ import '../../../core/theme/screen_neutrals.dart';
 import '../../../core/theme/section_accents.dart';
 import '../../../core/theme/visual_style_provider.dart';
 import '../../../shared/providers/current_workspace_provider.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/section_app_bar.dart';
 import '../../../shared/widgets/sheet_drag_handle.dart';
 import '../data/category_repository.dart';
@@ -54,8 +55,27 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
           Expanded(
             child: categoriesAsync.when(
               loading: () => Center(child: CircularProgressIndicator(color: n.isGame ? accent : null)),
-              error: (error, _) => Center(child: Text('Không thể tải danh mục', style: TextStyle(color: n.textPrimary))),
-              data: (categories) => RefreshIndicator(
+              error: (error, _) => EmptyStateWidget(
+                message: 'Không thể tải danh mục',
+                icon: Icons.cloud_off_outlined,
+                accent: accent,
+                action: TextButton(
+                  onPressed: () {
+                    ref.invalidate(incomeCategoriesProvider);
+                    ref.invalidate(expenseCategoriesProvider);
+                  },
+                  child: const Text('Thử lại'),
+                ),
+              ),
+              data: (categories) {
+                if (categories.isEmpty) {
+                  return EmptyStateWidget(
+                    message: 'Chưa có danh mục nào.\nBấm "Thêm danh mục" để tạo.',
+                    icon: Icons.label_outline,
+                    accent: accent,
+                  );
+                }
+                return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(incomeCategoriesProvider);
                   ref.invalidate(expenseCategoriesProvider);
@@ -88,7 +108,8 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
                     );
                   },
                 ),
-              ),
+              );
+              },
             ),
           ),
         ],

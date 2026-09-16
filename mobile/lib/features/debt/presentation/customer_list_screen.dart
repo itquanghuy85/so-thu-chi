@@ -18,7 +18,7 @@ import 'create_supplier_sheet.dart';
 import 'customer_detail_screen.dart';
 import 'supplier_detail_screen.dart';
 
-enum _DebtFilter { all, owing, overdue }
+enum _DebtFilter { all, owing }
 
 const _supplierColor = Color(0xFFE65100);
 
@@ -219,8 +219,6 @@ class _ReceivableTabState extends ConsumerState<_ReceivableTab> {
                         _FilterChip(label: 'Tất cả', count: customers.length, selected: widget.filter == _DebtFilter.all, neutrals: n, accent: accent, onTap: () => widget.onFilterChanged(_DebtFilter.all)),
                         const SizedBox(width: 8),
                         _FilterChip(label: 'Đang nợ', count: owing.length, selected: widget.filter == _DebtFilter.owing, neutrals: n, accent: accent, onTap: () => widget.onFilterChanged(_DebtFilter.owing)),
-                        const SizedBox(width: 8),
-                        _FilterChip(label: 'Quá hạn', count: 0, selected: widget.filter == _DebtFilter.overdue, neutrals: n, accent: accent, onTap: () => widget.onFilterChanged(_DebtFilter.overdue)),
                       ]),
                     ),
                     const SizedBox(height: 14),
@@ -231,8 +229,6 @@ class _ReceivableTabState extends ConsumerState<_ReceivableTab> {
                         Expanded(child: _SummaryStat(label: 'Tổng phải thu', amount: totalDebt, color: AppColors.expense, neutrals: n)),
                         Container(width: 1, height: 32, color: n.divider),
                         Expanded(child: _SummaryStat(label: 'Đang nợ', amount: owing.fold(0, (s, c) => s + c.debtBalance), color: n.textPrimary, neutrals: n)),
-                        Container(width: 1, height: 32, color: n.divider),
-                        Expanded(child: _SummaryStat(label: 'Quá hạn', amount: 0, color: n.textSecondary, neutrals: n)),
                       ]),
                     ),
                     const SizedBox(height: 12),

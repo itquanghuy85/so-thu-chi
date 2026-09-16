@@ -161,7 +161,7 @@ class _CloseTodayFormState extends ConsumerState<_CloseTodayForm> {
               const SizedBox(height: 16),
               ...vaults.map((v) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: AmountTextField(controller: _controllers[v.id]!, label: '${v.name} (sổ sách: ${formatVND(v.currentBalance)})'),
+                    child: AmountTextField(controller: _controllers[v.id]!, label: '${v.name} (sổ sách: ${formatVND(v.currentBalance)})', allowZero: true),
                   )),
               TextField(
                 controller: _noteController,

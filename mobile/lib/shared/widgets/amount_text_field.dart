@@ -12,6 +12,7 @@ class AmountTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final bool required;
+  final bool allowZero;
   final ValueChanged<String>? onChanged;
   final Widget? suffixIcon;
   final Color accent;
@@ -21,6 +22,7 @@ class AmountTextField extends StatefulWidget {
     required this.controller,
     this.label = 'Số tiền',
     this.required = true,
+    this.allowZero = false,
     this.onChanged,
     this.suffixIcon,
     this.accent = AppColors.primary,
@@ -47,7 +49,9 @@ class _AmountTextFieldState extends State<AmountTextField> {
 
   String? _validate(String? value) {
     final amount = parseCurrencyInput(value ?? '');
-    if (widget.required && amount <= 0) return 'Số tiền phải lớn hơn 0';
+    if (widget.required && amount < (widget.allowZero ? 0 : 1)) {
+      return widget.allowZero ? 'Số tiền không được âm' : 'Số tiền phải lớn hơn 0';
+    }
     if (amount > 999999999999) return 'Số tiền quá lớn';
     return null;
   }

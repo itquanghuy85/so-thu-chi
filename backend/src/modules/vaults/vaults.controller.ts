@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { VaultsService } from './vaults.service';
 import { CreateVaultDto } from './dto/create-vault.dto';
+import { UpdateVaultDto } from './dto/update-vault.dto';
 import { ReconcileVaultDto } from './dto/reconcile-vault.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { WorkspaceMemberGuard } from '../../common/guards/workspace-member.guard';
@@ -29,6 +30,11 @@ export class VaultsController {
   @Post('vaults/:id/reconcile')
   reconcile(@Param('id') vaultId: string, @CurrentUser() user: JwtUserPayload, @Body() dto: ReconcileVaultDto) {
     return this.vaultsService.reconcile(vaultId, user.id, dto);
+  }
+
+  @Patch('vaults/:id')
+  update(@Param('id') vaultId: string, @CurrentUser() user: JwtUserPayload, @Body() dto: UpdateVaultDto) {
+    return this.vaultsService.update(vaultId, user.id, dto);
   }
 
   @Delete('vaults/:id')

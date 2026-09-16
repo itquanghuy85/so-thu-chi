@@ -133,6 +133,7 @@ class _ReconcileFormState extends ConsumerState<_ReconcileForm> {
               AmountTextField(
                 controller: _amountController,
                 label: 'Số tiền thực tế',
+                allowZero: true,
                 onChanged: (_) => setState(() {}),
               ),
               if (_amountController.text.isNotEmpty) ...[

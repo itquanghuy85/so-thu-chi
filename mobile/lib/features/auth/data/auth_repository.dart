@@ -172,6 +172,36 @@ class AuthRepository {
     }
   }
 
+  /// "Quên mật khẩu" step 1 (spec Mục — `POST /auth/forgot-password`):
+  /// asks the server to email a 6-digit OTP to this account. Responds the
+  /// same regardless of whether the email exists.
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _dio.post(ApiEndpoints.forgotPassword, data: {'email': email});
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// "Quên mật khẩu" step 2 (`POST /auth/reset-password`): exchanges the
+  /// emailed OTP for a brand-new password. 400 `INVALID_OTP` /
+  /// `OTP_EXPIRED` surface as [ApiException] codes the UI can translate.
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.post(ApiEndpoints.resetPassword, data: {
+        'email': email,
+        'otp': otp,
+        'new_password': newPassword,
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// "Ảnh đại diện": multipart upload of the picked image file. Returns the
   /// updated profile (with the new `avatarUrl`) so the caller can refresh
   /// the UI immediately without a second round-trip.

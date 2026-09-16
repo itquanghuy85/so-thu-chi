@@ -31,6 +31,8 @@ class ApiEndpoints {
   static const String socialLogin = '/auth/social-login';
   static const String deleteAccount = '/auth/account';
   static const String changePassword = '/auth/change-password';
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String resetPassword = '/auth/reset-password';
   static const String uploadAvatar = '/auth/avatar';
   static const String pin = '/auth/pin';
 
@@ -49,6 +51,7 @@ class ApiEndpoints {
   static String vaults(String workspaceId) => '/workspaces/$workspaceId/vaults';
   static String reconcileVault(String vaultId) => '/vaults/$vaultId/reconcile';
   static String deleteVault(String vaultId) => '/vaults/$vaultId';
+  static String updateVault(String vaultId) => '/vaults/$vaultId';
 
   // Categories
   static String categories(String workspaceId) => '/workspaces/$workspaceId/categories';

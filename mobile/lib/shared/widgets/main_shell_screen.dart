@@ -7,6 +7,8 @@ import '../../core/offline/sync_queue_service.dart';
 import '../../core/theme/screen_neutrals.dart';
 import '../../core/theme/section_accents.dart';
 import '../../core/theme/visual_style_provider.dart';
+import '../providers/ai_fab_position_provider.dart';
+import 'draggable_ai_fab.dart';
 import 'offline_banner.dart';
 
 class _NavItem {
@@ -53,18 +55,27 @@ class MainShellScreen extends ConsumerWidget {
       body: Column(
         children: [
           const OfflineBanner(),
-          Expanded(child: navigationShell),
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(child: navigationShell),
+                // Nút AI chat nhanh — kéo được dọc mép phải, vị trí được nhớ
+                // qua các lần mở app (Mục — "Trợ lý AI").
+                Consumer(
+                  builder: (context, ref, child) {
+                    final savedRatio = ref.watch(aiFabPositionProvider);
+                    return DraggableAiFab(
+                      onTap: () => context.push('/ai-chat'),
+                      initialTopRatio: savedRatio,
+                      onTopRatioChanged: (ratio) => ref.read(aiFabPositionProvider.notifier).saveRatio(ratio),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
         ],
       ),
-      // Nút AI chat nhanh — nổi phía trên bottom nav, không cản tab bar
-      floatingActionButton: FloatingActionButton.small(
-        heroTag: 'ai_chat_fab',
-        tooltip: 'Trợ lý AI',
-        backgroundColor: const Color(0xFF6C63FF),
-        onPressed: () => context.push('/ai-chat'),
-        child: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           color: n.surface,

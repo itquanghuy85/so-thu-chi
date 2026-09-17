@@ -12,6 +12,10 @@ class SecureStorageKeys {
   static const String failedPinAttempts = 'app_lock_failed_attempts';
   static const String pinLockoutUntil = 'app_lock_lockout_until';
   static const String visualStyle = 'app_visual_style';
+
+  /// Ratio (0..1) of the draggable range where the floating "Trợ lý AI"
+  /// button in the main shell was last dragged to.
+  static const String aiFabTopRatio = 'ui_ai_fab_top_ratio';
   static const String onboardingSeen = 'onboarding_seen';
   static const String fcmToken = 'fcm_token_registered';
 
